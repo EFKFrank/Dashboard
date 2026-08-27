@@ -115,6 +115,10 @@
   @media (max-width: 880px) { .main-grid { grid-template-columns: 1fr; } }
 
   .chart-card svg { width: 100%; height: auto; display: block; }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 18px; font-size: 12.5px; color: var(--efk-text-soft); margin: -6px 0 12px; }
+  .chart-legend .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch-bar { width: 12px; height: 12px; background: #003399; border-radius: 2px; display: inline-block; }
+  .legend-swatch-line { width: 18px; height: 0; border-top: 2.5px dashed var(--efk-accent1); display: inline-block; }
 
   .stats-col .stat-card.stat-card-compact { padding: 14px 20px; }
   .stat-card {
@@ -210,6 +214,7 @@
     <div class="main-grid">
       <div class="panel chart-card" style="margin-bottom:0;">
         <h2>Évolution annuelle</h2>
+        <div class="chart-legend" id="chart-legend"></div>
         <div id="chart-container"></div>
       </div>
       <aside class="stats-col">
@@ -986,7 +991,16 @@
     var years = [];
     for (var y = yMin; y <= yMax; y++) years.push(y);
     var values = years.map(function (yy) { return totalsByYear[yy] || 0; });
+
+    // Courbe de tendance : projection lissée au taux de croissance annuel moyen (TCAM,
+    // méthode géométrique) entre la première et la dernière année de la période sélectionnée.
+    var cagr = computeCAGR(totalsByYear[yMin], totalsByYear[yMax], yMax - yMin);
+    var trendValues = isFinite(cagr)
+      ? years.map(function (yy) { return totalsByYear[yMin] * Math.pow(1 + cagr, yy - yMin); })
+      : null;
+
     var maxVal = Math.max(1, values.reduce(function (a, b) { return Math.max(a, b); }, 0));
+    if (trendValues) maxVal = Math.max(maxVal, trendValues.reduce(function (a, b) { return Math.max(a, b); }, 0));
 
     var width = 780, height = 440;
     var marginLeft = 92, marginRight = 16, marginTop = 16, marginBottom = 46;
@@ -1006,20 +1020,57 @@
       parts.push('<text x="' + (marginLeft - 8) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="11" fill="#48494b">' + formatSwiss(val) + '</text>');
     }
 
+    var centerX = [];
+    var valueLabelParts = [];
     years.forEach(function (yr, i) {
       var v = values[i];
       var barH = maxVal > 0 ? (v / maxVal) * plotH : 0;
       var x = marginLeft + i * slot + (slot - barW) / 2;
       var yTop = marginTop + plotH - barH;
+      centerX.push(x + barW / 2);
       parts.push('<rect x="' + x + '" y="' + yTop + '" width="' + barW + '" height="' + barH + '" fill="#003399" rx="2"><title>' + yr + ' : ' + formatSwiss(v) + '</title></rect>');
       parts.push('<text x="' + (x + barW / 2) + '" y="' + (marginTop + plotH + 20) + '" text-anchor="middle" font-size="12" fill="#48494b">' + yr + '</text>');
+      // Étiquettes de valeur : dessinées après la courbe de tendance (voir plus bas) pour
+      // rester lisibles par-dessus, avec un halo clair derrière le texte.
       if (barW > 34) {
-        parts.push('<text x="' + (x + barW / 2) + '" y="' + (yTop - 6) + '" text-anchor="middle" font-size="10.5" fill="#48494b">' + formatSwiss(v) + '</text>');
+        valueLabelParts.push('<text x="' + (x + barW / 2) + '" y="' + (yTop - 6) + '" text-anchor="middle" font-size="10.5" fill="#48494b" ' +
+          'paint-order="stroke" stroke="#f4f5f5" stroke-width="3" stroke-linejoin="round">' + formatSwiss(v) + '</text>');
       }
     });
 
+    if (trendValues) {
+      var points = trendValues.map(function (v, i) {
+        var y = marginTop + plotH - (maxVal > 0 ? (v / maxVal) * plotH : 0);
+        return [centerX[i], y];
+      });
+      var pathD = points.map(function (p, i) { return (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+      parts.push('<path d="' + pathD + '" fill="none" stroke="#EA5A4F" stroke-width="2.5" stroke-dasharray="6 4"/>');
+      points.forEach(function (p, i) {
+        parts.push('<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3.5" fill="#EA5A4F"><title>Tendance ' + years[i] + ' : ' + formatSwiss(trendValues[i]) + '</title></circle>');
+      });
+    }
+
+    parts.push.apply(parts, valueLabelParts);
+
     parts.push('</svg>');
     chartContainer.innerHTML = parts.join('');
+    renderChartLegend(cagr);
+  }
+
+  function renderChartLegend(cagr) {
+    var legendEl = document.getElementById('chart-legend');
+    legendEl.innerHTML = '';
+    legendEl.appendChild(h('span', { class: 'legend-item' }, [
+      h('span', { class: 'legend-swatch-bar' }),
+      document.createTextNode('Montant annuel')
+    ]));
+    if (isFinite(cagr)) {
+      var pct = cagr * 100;
+      legendEl.appendChild(h('span', { class: 'legend-item' }, [
+        h('span', { class: 'legend-swatch-line' }),
+        document.createTextNode('Tendance (TCAM ' + (pct >= 0 ? '+' : '') + pct.toFixed(1) + ' %/an)')
+      ]));
+    }
   }
 
 })();
