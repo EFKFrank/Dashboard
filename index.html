@@ -1,0 +1,845 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tableau de bord — Analyse de subventions</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --efk-text:       #000000;
+    --efk-text-soft:  #48494b;
+    --efk-bg:         #FFFFFF;
+    --efk-bg-page:    #f4f5f5;
+    --efk-grey-dark:  #ADAFB2;
+    --efk-grey-light: #D1D3D4;
+    --efk-accent1:    #EA5A4F;
+    --efk-accent2:    #003399;
+    --efk-accent3:    #00A6A3;
+    --efk-accent4:    #FAE03C;
+    --efk-font: Calibri, Candara, "Segoe UI", Optima, Arial, sans-serif;
+    --efk-font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--efk-bg-page); color: var(--efk-text); font-family: var(--efk-font); }
+  body { padding: 0 0 60px; }
+
+  .app { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+
+  .app-header { padding: 40px 0 24px; border-bottom: 3px solid var(--efk-accent2); margin-bottom: 28px; }
+  .eyebrow {
+    font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--efk-grey-dark); font-weight: 700; margin: 0 0 6px;
+  }
+  .app-header h1 { font-size: 32px; color: var(--efk-accent2); margin: 0 0 10px; }
+  .lede { font-size: 17px; line-height: 1.5; color: var(--efk-text-soft); max-width: 62rem; margin: 0; }
+
+  .panel {
+    background: var(--efk-bg); border: 1px solid var(--efk-grey-light); border-radius: 6px;
+    padding: 26px 28px; margin-bottom: 24px;
+  }
+  .panel h2 { font-size: 20px; margin: 0 0 14px; color: var(--efk-text); }
+  .panel h3 { font-size: 15px; margin: 18px 0 8px; color: var(--efk-text); }
+  .panel h3:first-child { margin-top: 0; }
+  .hint { font-size: 14px; color: var(--efk-text-soft); line-height: 1.5; margin: 0 0 14px; }
+
+  /* ---- import dropzone ---- */
+  .dropzone {
+    border: 2px dashed var(--efk-grey-dark); border-radius: 8px; padding: 34px 20px;
+    text-align: center; background: #fafafa; cursor: pointer; transition: border-color .15s ease;
+  }
+  .dropzone:hover, .dropzone.dragover { border-color: var(--efk-accent2); }
+  .dropzone p { margin: 0; color: var(--efk-text-soft); font-size: 15px; }
+  .dropzone strong { color: var(--efk-accent2); }
+  .dropzone input { display: none; }
+
+  /* ---- generic form bits ---- */
+  .field-row { display: flex; flex-wrap: wrap; gap: 22px; margin-bottom: 4px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  select, button {
+    font-family: var(--efk-font); font-size: 14px; padding: 7px 10px;
+    border: 1px solid var(--efk-grey-dark); border-radius: 4px; background: #fff; color: var(--efk-text);
+  }
+  button { cursor: pointer; background: var(--efk-accent2); color: #fff; border-color: var(--efk-accent2); font-weight: 600; }
+  button:hover { background: #002673; }
+  button.secondary { background: #fff; color: var(--efk-accent2); }
+  button.secondary:hover { background: #eef1fa; }
+  button.link { background: none; border: none; color: var(--efk-accent2); font-weight: 600; padding: 0; text-decoration: underline; }
+  label.radio-opt { display: flex; align-items: baseline; gap: 8px; font-size: 14.5px; margin-bottom: 6px; cursor: pointer; }
+
+  .col-config-row {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 8px 0; border-top: 1px solid var(--efk-grey-light);
+  }
+  .col-config-row:first-of-type { border-top: none; }
+  .col-config-row .col-name { font-weight: 600; min-width: 220px; }
+  .col-config-row label { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+
+  #year-columns-checkboxes { display: flex; flex-wrap: wrap; gap: 10px 18px; }
+  #year-columns-checkboxes label { font-size: 14px; display: flex; align-items: center; gap: 6px; }
+
+  .wizard-actions { margin-top: 20px; }
+
+  /* ---- dashboard controls ---- */
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .toolbar .file-name { font-size: 13.5px; color: var(--efk-grey-dark); }
+
+  .controls-grid { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .period-control { display: flex; gap: 18px; align-items: flex-end; }
+  .period-control .field label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--efk-text-soft); }
+
+  #category-controls { display: flex; flex-wrap: wrap; gap: 16px; flex: 1; }
+  .cat-control {
+    border: 1px solid var(--efk-grey-light); border-radius: 6px; padding: 10px 12px;
+    min-width: 190px; max-width: 260px; background: #fafbfc;
+  }
+  .cat-control-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .cat-name { font-weight: 700; font-size: 14px; }
+  .agg-toggle { font-size: 12.5px; color: var(--efk-accent2); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .cat-values { max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+  .cat-values label { font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .cat-select-links { font-size: 11.5px; margin-bottom: 6px; }
+  .cat-select-links button { font-size: 11.5px; }
+
+  .reset-link { align-self: center; }
+
+  /* ---- main grid: chart + stats ---- */
+  .main-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; margin-top: 24px; align-items: start; }
+  @media (max-width: 880px) { .main-grid { grid-template-columns: 1fr; } }
+
+  .chart-card svg { width: 100%; height: auto; display: block; }
+
+  .stat-card {
+    border: 1px solid var(--efk-grey-light); border-radius: 6px; padding: 18px 20px; margin-bottom: 18px; background: #fafbfc;
+  }
+  .stat-card h3 { margin: 0 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--efk-text-soft); }
+  .stat-value { font-size: 34px; font-weight: 700; color: var(--efk-accent2); margin: 0; }
+  .stat-note { font-size: 12.5px; color: var(--efk-grey-dark); margin: 6px 0 0; line-height: 1.4; }
+
+  #top3-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  #top3-list li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; border-top: 1px solid var(--efk-grey-light); padding-top: 8px; }
+  #top3-list li:first-child { border-top: none; padding-top: 0; }
+  #top3-list .top3-name { color: var(--efk-text); font-weight: 600; }
+  #top3-list .top3-sum { color: var(--efk-accent2); font-weight: 700; white-space: nowrap; }
+  #top3-list li.empty { color: var(--efk-grey-dark); font-style: italic; }
+
+  .error-box { background: #faf1f0; border-left: 4px solid var(--efk-accent1); padding: 10px 16px; font-size: 14px; margin: 12px 0; color: var(--efk-text); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <p class="eyebrow">EFK · CDF — Outil d'analyse</p>
+    <h1>Tableau de bord dynamique</h1>
+    <p class="lede">
+      Importez un fichier de données (CSV ou Excel) contenant au minimum une variable temporelle et une variable
+      de valeur, et éventuellement une ou plusieurs variables catégorielles (par ex. département, canton, type).
+      Une fois le fichier importé, <strong>saisissez la période à analyser</strong> à l'aide des deux menus
+      « année minimale » et « année maximale » : par défaut, l'ensemble de la période disponible dans vos
+      données est affiché.
+    </p>
+  </header>
+
+  <section class="panel" id="import-section">
+    <h2>1. Importer vos données</h2>
+    <div class="dropzone" id="dropzone">
+      <p><strong>Cliquez pour choisir un fichier</strong> ou glissez-le ici — formats acceptés : .csv, .xlsx, .xls</p>
+      <input type="file" id="file-input" accept=".csv,.xlsx,.xls">
+    </div>
+    <div id="sheet-picker-wrap"></div>
+    <div id="wizard-wrap"></div>
+    <div id="import-error"></div>
+  </section>
+
+  <section class="panel" id="dashboard-section" hidden>
+    <div class="toolbar">
+      <h2 style="margin:0;">2. Analyse</h2>
+      <div>
+        <span class="file-name" id="active-file-name"></span>
+        <button class="secondary" id="change-file-btn" type="button">Changer de fichier</button>
+      </div>
+    </div>
+    <p class="hint">
+      Choisissez la période à analyser, puis filtrez ou regroupez les variables catégorielles ci-dessous.
+      Le graphique et les statistiques se mettent à jour automatiquement.
+    </p>
+
+    <div class="controls-grid">
+      <div class="period-control">
+        <div class="field">
+          <label for="year-min">Année minimale</label>
+          <select id="year-min"></select>
+        </div>
+        <div class="field">
+          <label for="year-max">Année maximale</label>
+          <select id="year-max"></select>
+        </div>
+      </div>
+      <div id="category-controls"></div>
+      <button class="link reset-link" id="reset-filters-btn" type="button">Réinitialiser les filtres</button>
+    </div>
+
+    <div class="main-grid">
+      <div class="panel chart-card" style="margin-bottom:0;">
+        <h2>Évolution annuelle</h2>
+        <div id="chart-container"></div>
+      </div>
+      <aside class="stats-col">
+        <div class="stat-card">
+          <h3>Taux d'évolution moyen</h3>
+          <p class="stat-value" id="growth-rate-value">–</p>
+          <p class="stat-note">Moyenne des variations annuelles (année sur année) observées sur la période sélectionnée.</p>
+        </div>
+        <div class="stat-card">
+          <h3 id="top3-title">Top 3</h3>
+          <ol id="top3-list"></ol>
+          <p class="stat-note" id="top3-note"></p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+   * Utilitaires
+   * ========================================================== */
+  function h(tag, attrs, children) {
+    var e = document.createElement(tag);
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) {
+        if (k === 'text') e.textContent = attrs[k];
+        else if (k === 'class') e.className = attrs[k];
+        else if (k.indexOf('on') === 0 && typeof attrs[k] === 'function') e.addEventListener(k.slice(2), attrs[k]);
+        else e.setAttribute(k, attrs[k]);
+      });
+    }
+    (children || []).forEach(function (c) { if (c) e.appendChild(c); });
+    return e;
+  }
+
+  function parseSwissNumber(v) {
+    if (typeof v === 'number') return v;
+    if (v === null || v === undefined) return NaN;
+    var s = String(v).trim();
+    if (s === '') return NaN;
+    s = s.replace(/[’' \s]/g, '');
+    if (s.indexOf(',') !== -1 && s.indexOf('.') === -1) {
+      s = s.replace(',', '.');
+    } else {
+      s = s.replace(/,/g, '');
+    }
+    var n = parseFloat(s);
+    return n;
+  }
+
+  function formatSwiss(n) {
+    if (!isFinite(n)) return '–';
+    var sign = n < 0 ? '-' : '';
+    var abs = Math.round(Math.abs(n));
+    var s = String(abs);
+    var out = '';
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 === 0) out += "'";
+      out += s[i];
+    }
+    return sign + out;
+  }
+
+  function looksLikeYear(v) {
+    var n = parseInt(String(v).trim(), 10);
+    return isFinite(n) && n >= 1900 && n <= 2100 && /^\d{4}$/.test(String(v).trim());
+  }
+
+  function isYearHeader(header) {
+    return /^(19|20)\d{2}$/.test(String(header).trim());
+  }
+
+  /* ============================================================
+   * État global
+   * ========================================================== */
+  var rawHeaders = [];
+  var rawRows = [];
+  var workbookRef = null;
+  var activeFileName = '';
+
+  var longData = [];          // [{year, value, [catCol]: string, ...}]
+  var categoricalCols = [];   // colonnes catégorielles finales (post-fusion)
+  var primaryCol = null;      // colonne "nom principal" (fallback du top 3)
+  var filters = {};           // {col: Set(valeurs incluses)}
+  var aggregateCols = {};     // {col: true} colonnes actuellement cochées "agréger"
+  var allYears = [];
+
+  /* ============================================================
+   * Import de fichier
+   * ========================================================== */
+  var dropzone = document.getElementById('dropzone');
+  var fileInput = document.getElementById('file-input');
+  var importError = document.getElementById('import-error');
+  var sheetPickerWrap = document.getElementById('sheet-picker-wrap');
+  var wizardWrap = document.getElementById('wizard-wrap');
+
+  dropzone.addEventListener('click', function () { fileInput.click(); });
+  dropzone.addEventListener('dragover', function (e) { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', function () { dropzone.classList.remove('dragover'); });
+  dropzone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', function (e) {
+    if (e.target.files && e.target.files[0]) loadFile(e.target.files[0]);
+  });
+
+  function showError(msg) {
+    importError.innerHTML = '';
+    importError.appendChild(h('div', { class: 'error-box', text: msg }));
+  }
+  function clearError() { importError.innerHTML = ''; }
+
+  function loadFile(file) {
+    clearError();
+    sheetPickerWrap.innerHTML = '';
+    wizardWrap.innerHTML = '';
+    activeFileName = file.name;
+    var isCsv = /\.csv$/i.test(file.name);
+    var reader = new FileReader();
+    reader.onload = function (evt) {
+      var wb;
+      try {
+        if (isCsv) {
+          wb = XLSX.read(evt.target.result, { type: 'string' });
+        } else {
+          wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+        }
+      } catch (err) {
+        showError('Impossible de lire ce fichier : ' + err.message);
+        return;
+      }
+      workbookRef = wb;
+      if (wb.SheetNames.length > 1) {
+        renderSheetPicker(wb.SheetNames);
+      } else {
+        loadSheet(wb.SheetNames[0]);
+      }
+    };
+    reader.onerror = function () { showError('Erreur de lecture du fichier.'); };
+    if (isCsv) reader.readAsText(file, 'UTF-8'); else reader.readAsArrayBuffer(file);
+  }
+
+  function renderSheetPicker(names) {
+    var select = h('select', { id: 'sheet-select' });
+    names.forEach(function (n) { select.appendChild(h('option', { value: n, text: n })); });
+    var btn = h('button', { type: 'button', text: 'Charger cette feuille', onclick: function () { loadSheet(select.value); } });
+    sheetPickerWrap.innerHTML = '';
+    sheetPickerWrap.appendChild(h('div', { class: 'field-row', style: 'margin:14px 0;' }, [
+      h('div', { class: 'field' }, [h('label', { text: 'Ce fichier contient plusieurs feuilles — laquelle utiliser ?' }), select]),
+      btn
+    ]));
+  }
+
+  function loadSheet(sheetName) {
+    var sheet = workbookRef.Sheets[sheetName];
+    var rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
+    if (!rows.length) { showError('Cette feuille est vide.'); return; }
+    rawHeaders = rows[0].map(function (x) { return String(x).trim(); }).filter(function (x) { return x !== ''; });
+    var headerCount = rows[0].length;
+    rawRows = rows.slice(1)
+      .filter(function (r) { return r.some(function (c) { return c !== '' && c !== null && c !== undefined; }); })
+      .map(function (r) {
+        var obj = {};
+        for (var i = 0; i < headerCount; i++) {
+          var key = String(rows[0][i]).trim();
+          if (key === '') continue;
+          obj[key] = r[i];
+        }
+        return obj;
+      });
+    if (!rawHeaders.length || !rawRows.length) { showError('Aucune donnée exploitable trouvée dans cette feuille.'); return; }
+    renderWizard();
+  }
+
+  /* ============================================================
+   * Assistant d'import
+   * ========================================================== */
+  function renderWizard() {
+    wizardWrap.innerHTML = '';
+
+    var yearHeaders = rawHeaders.filter(isYearHeader);
+    var defaultMode = yearHeaders.length >= 2 ? 'wide' : 'long';
+
+    var modeLong = h('input', { type: 'radio', name: 'time-mode', value: 'long' });
+    var modeWide = h('input', { type: 'radio', name: 'time-mode', value: 'wide' });
+    if (defaultMode === 'long') modeLong.checked = true; else modeWide.checked = true;
+
+    var longOptionsBox = h('div', { id: 'time-mode-long-options' });
+    var wideOptionsBox = h('div', { id: 'time-mode-wide-options' });
+
+    function refreshModeVisibility() {
+      var mode = modeLong.checked ? 'long' : 'wide';
+      longOptionsBox.hidden = mode !== 'long';
+      wideOptionsBox.hidden = mode !== 'wide';
+      renderCategoricalConfig();
+    }
+    modeLong.addEventListener('change', refreshModeVisibility);
+    modeWide.addEventListener('change', refreshModeVisibility);
+
+    // -- long mode: year column + value column selects --
+    var yearColSelect = h('select', { id: 'year-col-select' });
+    var valueColSelect = h('select', { id: 'value-col-select' });
+    rawHeaders.forEach(function (col) {
+      yearColSelect.appendChild(h('option', { value: col, text: col }));
+      valueColSelect.appendChild(h('option', { value: col, text: col }));
+    });
+    // heuristics for defaults
+    var yearGuess = rawHeaders.find(function (col) {
+      var sample = rawRows.slice(0, 10).map(function (r) { return r[col]; });
+      var hits = sample.filter(looksLikeYear).length;
+      return hits >= Math.max(1, Math.floor(sample.length * 0.6));
+    });
+    if (yearGuess) yearColSelect.value = yearGuess;
+    var valueGuess = rawHeaders.find(function (col) {
+      if (col === yearGuess) return false;
+      var sample = rawRows.slice(0, 10).map(function (r) { return r[col]; });
+      var hits = sample.filter(function (v) { return isFinite(parseSwissNumber(v)); }).length;
+      return hits >= Math.max(1, Math.floor(sample.length * 0.6));
+    });
+    if (valueGuess) valueColSelect.value = valueGuess;
+
+    longOptionsBox.appendChild(h('div', { class: 'field-row' }, [
+      h('div', { class: 'field' }, [h('label', { text: 'Colonne « Année »' }), yearColSelect]),
+      h('div', { class: 'field' }, [h('label', { text: 'Colonne « Valeur » (montant à analyser)' }), valueColSelect])
+    ]));
+
+    // -- wide mode: year-columns checkboxes --
+    var yearColsBox = h('div', { id: 'year-columns-checkboxes' });
+    rawHeaders.forEach(function (col) {
+      var cb = h('input', { type: 'checkbox', value: col, class: 'year-col-checkbox', onchange: renderCategoricalConfig });
+      if (isYearHeader(col)) cb.checked = true;
+      yearColsBox.appendChild(h('label', {}, [cb, document.createTextNode(col)]));
+    });
+    wideOptionsBox.appendChild(h('p', { class: 'hint', text: 'Cochez les colonnes qui représentent chacune une année :' }));
+    wideOptionsBox.appendChild(yearColsBox);
+
+    yearColSelect.addEventListener('change', renderCategoricalConfig);
+    valueColSelect.addEventListener('change', renderCategoricalConfig);
+
+    var catConfigBox = h('div', { id: 'categorical-columns-config' });
+
+    function getYearMode() { return modeLong.checked ? 'long' : 'wide'; }
+    function getReservedCols() {
+      if (getYearMode() === 'long') {
+        return [yearColSelect.value, valueColSelect.value];
+      }
+      var checked = Array.prototype.slice.call(yearColsBox.querySelectorAll('.year-col-checkbox:checked')).map(function (cb) { return cb.value; });
+      return checked;
+    }
+
+    function renderCategoricalConfig() {
+      catConfigBox.innerHTML = '';
+      var reserved = getReservedCols();
+      var candidateCols = rawHeaders.filter(function (c) { return reserved.indexOf(c) === -1; });
+      if (!candidateCols.length) {
+        catConfigBox.appendChild(h('p', { class: 'hint', text: 'Aucune colonne restante à classer comme variable catégorielle.' }));
+        renderPrimarySelector([]);
+        return;
+      }
+      candidateCols.forEach(function (col) {
+        var includeCb = h('input', { type: 'checkbox', class: 'cat-include-cb', checked: 'checked' });
+        includeCb.checked = true;
+        includeCb.dataset.col = col;
+
+        var mergeSelect = h('select', { class: 'cat-merge-select' });
+        mergeSelect.dataset.col = col;
+        mergeSelect.appendChild(h('option', { value: '', text: 'Aucune' }));
+        candidateCols.forEach(function (other) {
+          if (other === col) return;
+          mergeSelect.appendChild(h('option', { value: other, text: other }));
+        });
+
+        includeCb.addEventListener('change', updatePrimaryOptions);
+        mergeSelect.addEventListener('change', function () {
+          includeCb.disabled = !!mergeSelect.value;
+          if (mergeSelect.value) includeCb.checked = false; else includeCb.checked = true;
+          updatePrimaryOptions();
+        });
+
+        catConfigBox.appendChild(h('div', { class: 'col-config-row' }, [
+          h('span', { class: 'col-name', text: col }),
+          h('label', {}, [includeCb, document.createTextNode('Inclure comme catégorie')]),
+          h('label', {}, [document.createTextNode('Fusionner (entre parenthèses) avec :'), mergeSelect])
+        ]));
+      });
+      updatePrimaryOptions();
+    }
+
+    var primaryBox = h('div', { id: 'primary-col-box' });
+
+    function updatePrimaryOptions() {
+      var rows = Array.prototype.slice.call(catConfigBox.querySelectorAll('.col-config-row'));
+      var finalCats = rows
+        .map(function (row) {
+          var cb = row.querySelector('.cat-include-cb');
+          var merge = row.querySelector('.cat-merge-select');
+          if (merge.value) return null;
+          if (!cb.checked) return null;
+          return cb.dataset.col;
+        })
+        .filter(Boolean);
+      renderPrimarySelector(finalCats);
+    }
+
+    function renderPrimarySelector(finalCats) {
+      primaryBox.innerHTML = '';
+      if (finalCats.length === 0) return;
+      primaryBox.appendChild(h('h3', { text: 'Variable catégorielle principale (nom affiché dans le top 3 par défaut)' }));
+      finalCats.forEach(function (col, i) {
+        var radio = h('input', { type: 'radio', name: 'primary-col', value: col });
+        if (i === 0) radio.checked = true;
+        primaryBox.appendChild(h('label', { class: 'radio-opt' }, [radio, document.createTextNode(col)]));
+      });
+    }
+
+    renderCategoricalConfig();
+
+    var validateBtn = h('button', { type: 'button', text: 'Valider et générer le tableau de bord', onclick: onValidateImport });
+
+    wizardWrap.appendChild(h('h3', { text: 'Comment votre variable temporelle est-elle représentée ?' }));
+    wizardWrap.appendChild(h('label', { class: 'radio-opt' }, [modeLong, document.createTextNode('Une seule colonne contient l’année')]));
+    wizardWrap.appendChild(h('label', { class: 'radio-opt' }, [modeWide, document.createTextNode('Les années sont réparties sur plusieurs colonnes')]));
+    wizardWrap.appendChild(longOptionsBox);
+    wizardWrap.appendChild(wideOptionsBox);
+    wizardWrap.appendChild(h('h3', { text: 'Variables catégorielles' }));
+    wizardWrap.appendChild(h('p', { class: 'hint', text: 'Décochez une colonne pour l’ignorer complètement, ou choisissez de la fusionner (affichée entre parenthèses) avec une autre colonne.' }));
+    wizardWrap.appendChild(catConfigBox);
+    wizardWrap.appendChild(primaryBox);
+    wizardWrap.appendChild(h('div', { class: 'wizard-actions' }, [validateBtn]));
+
+    refreshModeVisibility();
+
+    function onValidateImport() {
+      clearError();
+      var mode = getYearMode();
+      var mergeMap = {};
+      var finalCats = [];
+      var rawCatCols = [];
+
+      Array.prototype.slice.call(catConfigBox.querySelectorAll('.col-config-row')).forEach(function (row) {
+        var cb = row.querySelector('.cat-include-cb');
+        var merge = row.querySelector('.cat-merge-select');
+        var col = cb.dataset.col;
+        if (merge.value) {
+          mergeMap[col] = merge.value;
+          rawCatCols.push(col);
+        } else if (cb.checked) {
+          finalCats.push(col);
+          rawCatCols.push(col);
+        }
+      });
+
+      var primaryRadio = primaryBox.querySelector('input[name="primary-col"]:checked');
+      primaryCol = primaryRadio ? primaryRadio.value : (finalCats.length === 1 ? finalCats[0] : null);
+
+      var built;
+      if (mode === 'long') {
+        var yearCol = yearColSelect.value, valueCol = valueColSelect.value;
+        if (!yearCol || !valueCol) { showError('Merci de choisir une colonne Année et une colonne Valeur.'); return; }
+        built = buildLongData_long(yearCol, valueCol, rawCatCols, mergeMap);
+      } else {
+        var yearCols = Array.prototype.slice.call(yearColsBox.querySelectorAll('.year-col-checkbox:checked')).map(function (cb) { return cb.value; });
+        if (!yearCols.length) { showError('Merci de cocher au moins une colonne représentant une année.'); return; }
+        built = buildLongData_wide(yearCols, rawCatCols, mergeMap);
+      }
+
+      if (!built.length) { showError('Aucune ligne exploitable après import (vérifiez les colonnes choisies).'); return; }
+
+      longData = built;
+      categoricalCols = finalCats;
+      allYears = Array.from(new Set(longData.map(function (r) { return r.year; }))).sort(function (a, b) { return a - b; });
+
+      initDashboard();
+    }
+  }
+
+  function buildLongData_long(yearCol, valueCol, catCols, mergeMap) {
+    var out = [];
+    rawRows.forEach(function (row) {
+      var year = parseInt(String(row[yearCol]).trim(), 10);
+      var value = parseSwissNumber(row[valueCol]);
+      if (!isFinite(year) || !isFinite(value)) return;
+      var rec = { year: year, value: value };
+      catCols.forEach(function (c) {
+        rec[c] = row[c] === null || row[c] === undefined ? '' : String(row[c]).trim();
+      });
+      applyMerge(rec, mergeMap);
+      out.push(rec);
+    });
+    return out;
+  }
+
+  function buildLongData_wide(yearCols, catCols, mergeMap) {
+    var out = [];
+    rawRows.forEach(function (row) {
+      var base = {};
+      catCols.forEach(function (c) {
+        base[c] = row[c] === null || row[c] === undefined ? '' : String(row[c]).trim();
+      });
+      applyMerge(base, mergeMap);
+      yearCols.forEach(function (yc) {
+        var year = parseInt(yc, 10);
+        var value = parseSwissNumber(row[yc]);
+        if (!isFinite(year) || !isFinite(value)) return;
+        var rec = { year: year, value: value };
+        Object.keys(base).forEach(function (k) { rec[k] = base[k]; });
+        out.push(rec);
+      });
+    });
+    return out;
+  }
+
+  function applyMerge(rec, mergeMap) {
+    Object.keys(mergeMap).forEach(function (src) {
+      var tgt = mergeMap[src];
+      var srcVal = rec[src];
+      if (srcVal) rec[tgt] = rec[tgt] ? (rec[tgt] + ' (' + srcVal + ')') : ('(' + srcVal + ')');
+      delete rec[src];
+    });
+  }
+
+  /* ============================================================
+   * Tableau de bord
+   * ========================================================== */
+  var yearMinSelect = document.getElementById('year-min');
+  var yearMaxSelect = document.getElementById('year-max');
+  var categoryControls = document.getElementById('category-controls');
+  var chartContainer = document.getElementById('chart-container');
+  var growthRateValueEl = document.getElementById('growth-rate-value');
+  var top3TitleEl = document.getElementById('top3-title');
+  var top3ListEl = document.getElementById('top3-list');
+  var top3NoteEl = document.getElementById('top3-note');
+  var dashboardSection = document.getElementById('dashboard-section');
+  var importSection = document.getElementById('import-section');
+  var activeFileNameEl = document.getElementById('active-file-name');
+
+  document.getElementById('change-file-btn').addEventListener('click', function () {
+    dashboardSection.hidden = true;
+    importSection.hidden = false;
+    fileInput.value = '';
+  });
+  document.getElementById('reset-filters-btn').addEventListener('click', function () {
+    initFiltersAndAggregates();
+    renderCategoryControls();
+    recompute();
+  });
+
+  function initDashboard() {
+    activeFileNameEl.textContent = activeFileName;
+    importSection.hidden = true;
+    dashboardSection.hidden = false;
+
+    yearMinSelect.innerHTML = '';
+    yearMaxSelect.innerHTML = '';
+    allYears.forEach(function (y) {
+      yearMinSelect.appendChild(h('option', { value: y, text: y }));
+      yearMaxSelect.appendChild(h('option', { value: y, text: y }));
+    });
+    yearMinSelect.value = allYears[0];
+    yearMaxSelect.value = allYears[allYears.length - 1];
+    yearMinSelect.onchange = onPeriodChange;
+    yearMaxSelect.onchange = onPeriodChange;
+
+    initFiltersAndAggregates();
+    renderCategoryControls();
+    recompute();
+  }
+
+  function onPeriodChange() {
+    if (parseInt(yearMinSelect.value, 10) > parseInt(yearMaxSelect.value, 10)) {
+      yearMaxSelect.value = yearMinSelect.value;
+    }
+    recompute();
+  }
+
+  function initFiltersAndAggregates() {
+    filters = {};
+    aggregateCols = {};
+    categoricalCols.forEach(function (col) {
+      var values = Array.from(new Set(longData.map(function (r) { return r[col]; }))).sort();
+      filters[col] = new Set(values);
+    });
+  }
+
+  function renderCategoryControls() {
+    categoryControls.innerHTML = '';
+    categoricalCols.forEach(function (col) {
+      var values = Array.from(new Set(longData.map(function (r) { return r[col]; }))).sort();
+
+      var aggCb = h('input', { type: 'checkbox' });
+      aggCb.checked = !!aggregateCols[col];
+      aggCb.addEventListener('change', function () {
+        if (aggCb.checked) aggregateCols[col] = true; else delete aggregateCols[col];
+        recompute();
+      });
+
+      var valuesBox = h('div', { class: 'cat-values' });
+      var checkboxes = [];
+      values.forEach(function (val) {
+        var cb = h('input', { type: 'checkbox' });
+        cb.checked = filters[col].has(val);
+        cb.addEventListener('change', function () {
+          if (cb.checked) filters[col].add(val); else filters[col].delete(val);
+          recompute();
+        });
+        checkboxes.push(cb);
+        var labelText = val === '' ? '(vide)' : val;
+        valuesBox.appendChild(h('label', {}, [cb, document.createTextNode(labelText)]));
+      });
+
+      var selectAllBtn = h('button', { class: 'link', type: 'button', text: 'Tout', onclick: function () {
+        checkboxes.forEach(function (cb) { cb.checked = true; });
+        filters[col] = new Set(values);
+        recompute();
+      } });
+      var selectNoneBtn = h('button', { class: 'link', type: 'button', text: 'Aucun', onclick: function () {
+        checkboxes.forEach(function (cb) { cb.checked = false; });
+        filters[col] = new Set();
+        recompute();
+      } });
+
+      categoryControls.appendChild(h('div', { class: 'cat-control' }, [
+        h('div', { class: 'cat-control-header' }, [
+          h('span', { class: 'cat-name', text: col }),
+          h('label', { class: 'agg-toggle' }, [aggCb, document.createTextNode('Agréger')])
+        ]),
+        h('div', { class: 'cat-select-links' }, [selectAllBtn, document.createTextNode(' / '), selectNoneBtn]),
+        valuesBox
+      ]));
+    });
+  }
+
+  function recompute() {
+    var yMin = parseInt(yearMinSelect.value, 10);
+    var yMax = parseInt(yearMaxSelect.value, 10);
+
+    var filtered = longData.filter(function (r) {
+      if (r.year < yMin || r.year > yMax) return false;
+      for (var i = 0; i < categoricalCols.length; i++) {
+        var col = categoricalCols[i];
+        if (!filters[col].has(r[col])) return false;
+      }
+      return true;
+    });
+
+    var totalsByYear = {};
+    for (var y = yMin; y <= yMax; y++) totalsByYear[y] = 0;
+    filtered.forEach(function (r) { totalsByYear[r.year] = (totalsByYear[r.year] || 0) + r.value; });
+
+    renderChart(totalsByYear, yMin, yMax);
+    renderGrowthRate(totalsByYear, yMin, yMax);
+    renderTop3(filtered);
+  }
+
+  function renderGrowthRate(totalsByYear, yMin, yMax) {
+    var years = [];
+    for (var y = yMin; y <= yMax; y++) years.push(y);
+    var changes = [];
+    for (var i = 1; i < years.length; i++) {
+      var prev = totalsByYear[years[i - 1]];
+      var cur = totalsByYear[years[i]];
+      if (prev !== 0 && isFinite(prev) && isFinite(cur)) changes.push((cur - prev) / prev);
+    }
+    if (!changes.length) { growthRateValueEl.textContent = '–'; growthRateValueEl.style.color = ''; return; }
+    var avg = changes.reduce(function (a, b) { return a + b; }, 0) / changes.length;
+    var pct = avg * 100;
+    growthRateValueEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + ' %';
+    growthRateValueEl.style.color = pct >= 0 ? 'var(--efk-accent2)' : 'var(--efk-accent1)';
+  }
+
+  function renderTop3(filtered) {
+    var groupCols = Object.keys(aggregateCols);
+    var usingAggregation = groupCols.length > 0;
+    if (!usingAggregation && primaryCol) groupCols = [primaryCol];
+
+    top3TitleEl.textContent = usingAggregation
+      ? 'Top 3 — regroupé par ' + groupCols.join(' × ')
+      : (primaryCol ? 'Top 3 — ' + primaryCol : 'Top 3');
+
+    top3ListEl.innerHTML = '';
+    if (!groupCols.length) {
+      top3ListEl.appendChild(h('li', { class: 'empty', text: 'Aucune variable catégorielle disponible pour ce classement.' }));
+      top3NoteEl.textContent = '';
+      return;
+    }
+
+    var sums = {};
+    filtered.forEach(function (r) {
+      var parts = groupCols.map(function (c) { return r[c]; });
+      var key = parts.join('␟');
+      var label = parts.join(' × ');
+      if (!sums[key]) sums[key] = { label: label, sum: 0 };
+      sums[key].sum += r.value;
+    });
+    var top3 = Object.keys(sums).map(function (k) { return sums[k]; }).sort(function (a, b) { return b.sum - a.sum; }).slice(0, 3);
+
+    if (!top3.length) {
+      top3ListEl.appendChild(h('li', { class: 'empty', text: 'Aucune donnée pour cette sélection.' }));
+    } else {
+      top3.forEach(function (item) {
+        top3ListEl.appendChild(h('li', {}, [
+          h('span', { class: 'top3-name', text: item.label || '(vide)' }),
+          h('span', { class: 'top3-sum', text: formatSwiss(item.sum) })
+        ]));
+      });
+    }
+    top3NoteEl.textContent = 'Classement par somme sur la période sélectionnée (identique au classement par moyenne, le nombre d’années étant le même pour tous).';
+  }
+
+  function renderChart(totalsByYear, yMin, yMax) {
+    var years = [];
+    for (var y = yMin; y <= yMax; y++) years.push(y);
+    var values = years.map(function (yy) { return totalsByYear[yy] || 0; });
+    var maxVal = Math.max(1, values.reduce(function (a, b) { return Math.max(a, b); }, 0));
+
+    var width = 780, height = 440;
+    var marginLeft = 92, marginRight = 16, marginTop = 16, marginBottom = 46;
+    var plotW = width - marginLeft - marginRight;
+    var plotH = height - marginTop - marginBottom;
+    var slot = plotW / years.length;
+    var barW = Math.max(4, slot - 12);
+
+    var parts = [];
+    parts.push('<svg viewBox="0 0 ' + width + ' ' + height + '" xmlns="http://www.w3.org/2000/svg" font-family="Calibri, Arial, sans-serif">');
+
+    var ticks = 4;
+    for (var t = 0; t <= ticks; t++) {
+      var val = maxVal * t / ticks;
+      var yy = marginTop + plotH - (val / maxVal) * plotH;
+      parts.push('<line x1="' + marginLeft + '" x2="' + (width - marginRight) + '" y1="' + yy + '" y2="' + yy + '" stroke="#D1D3D4" stroke-width="1"/>');
+      parts.push('<text x="' + (marginLeft - 8) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="11" fill="#48494b">' + formatSwiss(val) + '</text>');
+    }
+
+    years.forEach(function (yr, i) {
+      var v = values[i];
+      var barH = maxVal > 0 ? (v / maxVal) * plotH : 0;
+      var x = marginLeft + i * slot + (slot - barW) / 2;
+      var yTop = marginTop + plotH - barH;
+      parts.push('<rect x="' + x + '" y="' + yTop + '" width="' + barW + '" height="' + barH + '" fill="#003399" rx="2"><title>' + yr + ' : ' + formatSwiss(v) + '</title></rect>');
+      parts.push('<text x="' + (x + barW / 2) + '" y="' + (marginTop + plotH + 20) + '" text-anchor="middle" font-size="12" fill="#48494b">' + yr + '</text>');
+      if (barW > 34) {
+        parts.push('<text x="' + (x + barW / 2) + '" y="' + (yTop - 6) + '" text-anchor="middle" font-size="10.5" fill="#48494b">' + formatSwiss(v) + '</text>');
+      }
+    });
+
+    parts.push('</svg>');
+    chartContainer.innerHTML = parts.join('');
+  }
+
+})();
+</script>
+</body>
+</html>
