@@ -93,9 +93,8 @@
     border: 1px solid var(--efk-grey-light); border-radius: 6px; padding: 10px 12px;
     min-width: 190px; max-width: 260px; background: #fafbfc;
   }
-  .cat-control-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .cat-control-header { margin-bottom: 6px; }
   .cat-name { font-weight: 700; font-size: 14px; }
-  .agg-toggle { font-size: 12.5px; color: var(--efk-accent2); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
   .cat-values { max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
   .cat-values label { font-size: 13px; display: flex; align-items: center; gap: 6px; }
   .cat-select-links { font-size: 11.5px; margin-bottom: 6px; }
@@ -103,17 +102,27 @@
 
   .reset-link { align-self: center; }
 
+  /* ---- dynamic selection summary ---- */
+  .selection-summary {
+    margin-top: 20px; padding: 12px 16px; border-radius: 6px;
+    background: #eef1fa; border: 1px solid #c7d1ee; font-size: 13.5px; line-height: 1.6; color: var(--efk-text);
+  }
+  .selection-summary strong { color: var(--efk-accent2); }
+  .selection-summary .sep { color: var(--efk-grey-dark); margin: 0 6px; }
+
   /* ---- main grid: chart + stats ---- */
-  .main-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; margin-top: 24px; align-items: start; }
+  .main-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; margin-top: 14px; align-items: start; }
   @media (max-width: 880px) { .main-grid { grid-template-columns: 1fr; } }
 
   .chart-card svg { width: 100%; height: auto; display: block; }
 
+  .stats-col .stat-card.stat-card-compact { padding: 14px 20px; }
   .stat-card {
     border: 1px solid var(--efk-grey-light); border-radius: 6px; padding: 18px 20px; margin-bottom: 18px; background: #fafbfc;
   }
   .stat-card h3 { margin: 0 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--efk-text-soft); }
   .stat-value { font-size: 34px; font-weight: 700; color: var(--efk-accent2); margin: 0; }
+  .stat-card-compact .stat-value { font-size: 26px; }
   .stat-note { font-size: 12.5px; color: var(--efk-grey-dark); margin: 6px 0 0; line-height: 1.4; }
 
   #top3-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -161,8 +170,8 @@
       </div>
     </div>
     <p class="hint">
-      Choisissez la période à analyser, puis filtrez ou regroupez les variables catégorielles ci-dessous.
-      Le graphique et les statistiques se mettent à jour automatiquement.
+      Choisissez la période à analyser, puis filtrez les variables catégorielles ci-dessous : le graphique et
+      les statistiques ne portent que sur les valeurs cochées et se mettent à jour automatiquement.
     </p>
 
     <div class="controls-grid">
@@ -180,6 +189,8 @@
       <button class="link reset-link" id="reset-filters-btn" type="button">Réinitialiser les filtres</button>
     </div>
 
+    <div class="selection-summary" id="selection-summary"></div>
+
     <div class="main-grid">
       <div class="panel chart-card" style="margin-bottom:0;">
         <h2>Évolution annuelle</h2>
@@ -190,6 +201,11 @@
           <h3>Taux d'évolution moyen</h3>
           <p class="stat-value" id="growth-rate-value">–</p>
           <p class="stat-note">Moyenne des variations annuelles (année sur année) observées sur la période sélectionnée.</p>
+        </div>
+        <div class="stat-card stat-card-compact">
+          <h3>Nombre de subventions dans la sélection</h3>
+          <p class="stat-value" id="count-value">–</p>
+          <p class="stat-note" id="count-note"></p>
         </div>
         <div class="stat-card">
           <h3 id="top3-title">Top 3</h3>
@@ -260,6 +276,24 @@
     return /^(19|20)\d{2}$/.test(String(header).trim());
   }
 
+  // Tri alphabétique correct (accents, umlauts, etc. — pas un tri par code point brut).
+  function localeSort(arr) {
+    return arr.slice().sort(function (a, b) {
+      return String(a).localeCompare(String(b), ['de', 'fr'], { sensitivity: 'base', numeric: true, ignorePunctuation: true });
+    });
+  }
+
+  // Décodage robuste d'un fichier CSV : tente l'UTF-8 strict, puis se rabat sur
+  // Windows-1252 (encodage courant des exports Excel) si des octets invalides sont détectés.
+  function decodeCsvArrayBuffer(buf) {
+    var bytes = new Uint8Array(buf);
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch (e) {
+      return new TextDecoder('windows-1252').decode(bytes);
+    }
+  }
+
   /* ============================================================
    * État global
    * ========================================================== */
@@ -272,7 +306,6 @@
   var categoricalCols = [];   // colonnes catégorielles finales (post-fusion)
   var primaryCol = null;      // colonne "nom principal" (fallback du top 3)
   var filters = {};           // {col: Set(valeurs incluses)}
-  var aggregateCols = {};     // {col: true} colonnes actuellement cochées "agréger"
   var allYears = [];
 
   /* ============================================================
@@ -313,7 +346,8 @@
       var wb;
       try {
         if (isCsv) {
-          wb = XLSX.read(evt.target.result, { type: 'string' });
+          var text = decodeCsvArrayBuffer(evt.target.result);
+          wb = XLSX.read(text, { type: 'string' });
         } else {
           wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
         }
@@ -329,7 +363,7 @@
       }
     };
     reader.onerror = function () { showError('Erreur de lecture du fichier.'); };
-    if (isCsv) reader.readAsText(file, 'UTF-8'); else reader.readAsArrayBuffer(file);
+    reader.readAsArrayBuffer(file);
   }
 
   function renderSheetPicker(names) {
@@ -619,9 +653,12 @@
   var categoryControls = document.getElementById('category-controls');
   var chartContainer = document.getElementById('chart-container');
   var growthRateValueEl = document.getElementById('growth-rate-value');
+  var countValueEl = document.getElementById('count-value');
+  var countNoteEl = document.getElementById('count-note');
   var top3TitleEl = document.getElementById('top3-title');
   var top3ListEl = document.getElementById('top3-list');
   var top3NoteEl = document.getElementById('top3-note');
+  var selectionSummaryEl = document.getElementById('selection-summary');
   var dashboardSection = document.getElementById('dashboard-section');
   var importSection = document.getElementById('import-section');
   var activeFileNameEl = document.getElementById('active-file-name');
@@ -667,9 +704,8 @@
 
   function initFiltersAndAggregates() {
     filters = {};
-    aggregateCols = {};
     categoricalCols.forEach(function (col) {
-      var values = Array.from(new Set(longData.map(function (r) { return r[col]; }))).sort();
+      var values = localeSort(Array.from(new Set(longData.map(function (r) { return r[col]; }))));
       filters[col] = new Set(values);
     });
   }
@@ -677,14 +713,7 @@
   function renderCategoryControls() {
     categoryControls.innerHTML = '';
     categoricalCols.forEach(function (col) {
-      var values = Array.from(new Set(longData.map(function (r) { return r[col]; }))).sort();
-
-      var aggCb = h('input', { type: 'checkbox' });
-      aggCb.checked = !!aggregateCols[col];
-      aggCb.addEventListener('change', function () {
-        if (aggCb.checked) aggregateCols[col] = true; else delete aggregateCols[col];
-        recompute();
-      });
+      var values = localeSort(Array.from(new Set(longData.map(function (r) { return r[col]; }))));
 
       var valuesBox = h('div', { class: 'cat-values' });
       var checkboxes = [];
@@ -713,8 +742,7 @@
 
       categoryControls.appendChild(h('div', { class: 'cat-control' }, [
         h('div', { class: 'cat-control-header' }, [
-          h('span', { class: 'cat-name', text: col }),
-          h('label', { class: 'agg-toggle' }, [aggCb, document.createTextNode('Agréger')])
+          h('span', { class: 'cat-name', text: col })
         ]),
         h('div', { class: 'cat-select-links' }, [selectAllBtn, document.createTextNode(' / '), selectNoneBtn]),
         valuesBox
@@ -741,7 +769,9 @@
 
     renderChart(totalsByYear, yMin, yMax);
     renderGrowthRate(totalsByYear, yMin, yMax);
+    renderCount(filtered);
     renderTop3(filtered);
+    renderSelectionSummary(yMin, yMax);
   }
 
   function renderGrowthRate(totalsByYear, yMin, yMax) {
@@ -760,17 +790,22 @@
     growthRateValueEl.style.color = pct >= 0 ? 'var(--efk-accent2)' : 'var(--efk-accent1)';
   }
 
-  function renderTop3(filtered) {
-    var groupCols = Object.keys(aggregateCols);
-    var usingAggregation = groupCols.length > 0;
-    if (!usingAggregation && primaryCol) groupCols = [primaryCol];
+  function renderCount(filtered) {
+    if (!primaryCol) {
+      countValueEl.textContent = '–';
+      countNoteEl.textContent = '';
+      return;
+    }
+    var distinct = new Set(filtered.map(function (r) { return r[primaryCol]; }));
+    countValueEl.textContent = String(distinct.size);
+    countNoteEl.textContent = 'Nombre de « ' + primaryCol + ' » distinctes présentes dans la sélection actuelle.';
+  }
 
-    top3TitleEl.textContent = usingAggregation
-      ? 'Top 3 — regroupé par ' + groupCols.join(' × ')
-      : (primaryCol ? 'Top 3 — ' + primaryCol : 'Top 3');
+  function renderTop3(filtered) {
+    top3TitleEl.textContent = primaryCol ? 'Top 3 — ' + primaryCol : 'Top 3';
 
     top3ListEl.innerHTML = '';
-    if (!groupCols.length) {
+    if (!primaryCol) {
       top3ListEl.appendChild(h('li', { class: 'empty', text: 'Aucune variable catégorielle disponible pour ce classement.' }));
       top3NoteEl.textContent = '';
       return;
@@ -778,11 +813,9 @@
 
     var sums = {};
     filtered.forEach(function (r) {
-      var parts = groupCols.map(function (c) { return r[c]; });
-      var key = parts.join('␟');
-      var label = parts.join(' × ');
-      if (!sums[key]) sums[key] = { label: label, sum: 0 };
-      sums[key].sum += r.value;
+      var label = r[primaryCol];
+      if (!sums[label]) sums[label] = { label: label, sum: 0 };
+      sums[label].sum += r.value;
     });
     var top3 = Object.keys(sums).map(function (k) { return sums[k]; }).sort(function (a, b) { return b.sum - a.sum; }).slice(0, 3);
 
@@ -797,6 +830,38 @@
       });
     }
     top3NoteEl.textContent = 'Classement par somme sur la période sélectionnée (identique au classement par moyenne, le nombre d’années étant le même pour tous).';
+  }
+
+  function renderSelectionSummary(yMin, yMax) {
+    var parts = [];
+    categoricalCols.forEach(function (col) {
+      var allValues = Array.from(new Set(longData.map(function (r) { return r[col]; })));
+      var total = allValues.length;
+      var selected = filters[col] ? filters[col].size : 0;
+      var text;
+      if (selected === total) {
+        text = col + ' : toutes (' + total + ')';
+      } else if (selected === 0) {
+        text = col + ' : aucune valeur';
+      } else if (selected <= 3) {
+        var labels = localeSort(Array.from(filters[col])).map(function (v) { return v === '' ? '(vide)' : v; });
+        text = col + ' : ' + labels.join(', ');
+      } else {
+        text = col + ' : ' + selected + ' / ' + total + ' sélectionnées';
+      }
+      parts.push(text);
+    });
+
+    var html = [];
+    html.push(h('strong', { text: 'Votre sélection actuelle — ' }));
+    html.push(document.createTextNode('Période : ' + yMin + '–' + yMax));
+    parts.forEach(function (p) {
+      html.push(h('span', { class: 'sep', text: '·' }));
+      html.push(document.createTextNode(p));
+    });
+
+    selectionSummaryEl.innerHTML = '';
+    html.forEach(function (node) { selectionSummaryEl.appendChild(node); });
   }
 
   function renderChart(totalsByYear, yMin, yMax) {
