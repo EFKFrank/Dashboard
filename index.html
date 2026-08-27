@@ -125,12 +125,28 @@
   .stat-card-compact .stat-value { font-size: 26px; }
   .stat-note { font-size: 12.5px; color: var(--efk-grey-dark); margin: 6px 0 0; line-height: 1.4; }
 
-  #top3-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-  #top3-list li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; border-top: 1px solid var(--efk-grey-light); padding-top: 8px; }
+  #top3-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  #top3-list li { display: flex; flex-direction: column; gap: 5px; font-size: 14px; border-top: 1px solid var(--efk-grey-light); padding-top: 9px; }
   #top3-list li:first-child { border-top: none; padding-top: 0; }
-  #top3-list .top3-name { color: var(--efk-text); font-weight: 600; }
-  #top3-list .top3-sum { color: var(--efk-accent2); font-weight: 700; white-space: nowrap; }
   #top3-list li.empty { color: var(--efk-grey-dark); font-style: italic; }
+  .top3-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .top3-name { color: var(--efk-text); font-weight: 600; }
+  .top3-sum { color: var(--efk-accent2); font-weight: 700; white-space: nowrap; }
+
+  /* ---- tendance (TCAM) : petite échelle visuelle à 5 niveaux ---- */
+  .trend-wrap { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .trend-scale { display: flex; gap: 2px; }
+  .trend-seg {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 3px; background: #eceef0; color: #c7cad0;
+    font-size: 9px; line-height: 1;
+  }
+  .trend-seg.active.trend-strong-down { background: #b23127; color: #fff; }
+  .trend-seg.active.trend-down        { background: var(--efk-accent1); color: #fff; }
+  .trend-seg.active.trend-flat        { background: var(--efk-grey-dark); color: #fff; }
+  .trend-seg.active.trend-up          { background: #5a7fd6; color: #fff; }
+  .trend-seg.active.trend-strong-up   { background: var(--efk-accent2); color: #fff; }
+  .trend-label { font-size: 11.5px; color: var(--efk-text-soft); white-space: nowrap; }
 
   .error-box { background: #faf1f0; border-left: 4px solid var(--efk-accent1); padding: 10px 16px; font-size: 14px; margin: 12px 0; color: var(--efk-text); }
 </style>
@@ -200,7 +216,7 @@
         <div class="stat-card">
           <h3>Taux d'évolution moyen</h3>
           <p class="stat-value" id="growth-rate-value">–</p>
-          <p class="stat-note">Moyenne des variations annuelles (année sur année) observées sur la période sélectionnée.</p>
+          <p class="stat-note" id="growth-rate-note"></p>
         </div>
         <div class="stat-card stat-card-compact">
           <h3>Nombre de subventions dans la sélection</h3>
@@ -292,6 +308,55 @@
     } catch (e) {
       return new TextDecoder('windows-1252').decode(bytes);
     }
+  }
+
+  // Taux de croissance annuel moyen (TCAM), méthode géométrique :
+  // (valeur_fin / valeur_début)^(1 / nombre d'intervalles) - 1.
+  // Non calculable si la valeur de départ est nulle/négative ou s'il n'y a qu'une seule année.
+  function computeCAGR(startVal, endVal, nIntervals) {
+    if (!isFinite(startVal) || !isFinite(endVal) || nIntervals <= 0) return NaN;
+    if (startVal <= 0 || endVal < 0) return NaN;
+    if (endVal === 0) return -1;
+    return Math.pow(endVal / startVal, 1 / nIntervals) - 1;
+  }
+
+  // Classement du TCAM sur une échelle à 5 niveaux, pour une lecture visuelle rapide.
+  var TREND_LEVELS = [
+    { level: -2, symbol: '▼▼', cls: 'trend-strong-down', text: 'Forte baisse' },
+    { level: -1, symbol: '▼',  cls: 'trend-down',         text: 'Baisse modérée' },
+    { level: 0,  symbol: '▬',  cls: 'trend-flat',          text: 'Stable' },
+    { level: 1,  symbol: '▲',  cls: 'trend-up',            text: 'Hausse modérée' },
+    { level: 2,  symbol: '▲▲', cls: 'trend-strong-up',     text: 'Forte hausse' }
+  ];
+  function classifyTrend(cagr) {
+    if (!isFinite(cagr)) return null;
+    var pct = cagr * 100;
+    var level;
+    if (pct <= -8) level = -2;
+    else if (pct <= -2) level = -1;
+    else if (pct < 2) level = 0;
+    else if (pct < 8) level = 1;
+    else level = 2;
+    return { level: level, pct: pct };
+  }
+
+  function buildTrendGauge(cagr) {
+    var info = classifyTrend(cagr);
+    var matched = info && TREND_LEVELS.filter(function (l) { return l.level === info.level; })[0];
+
+    var segRow = h('div', { class: 'trend-scale' });
+    TREND_LEVELS.forEach(function (lv) {
+      var active = matched && lv.level === matched.level;
+      segRow.appendChild(h('span', { class: 'trend-seg' + (active ? ' active ' + lv.cls : ''), text: lv.symbol }));
+    });
+
+    var pctText = info ? (info.pct >= 0 ? '+' : '') + info.pct.toFixed(1) + ' %/an' : 'n.d.';
+    var labelText = matched ? matched.text : 'Non calculable';
+
+    return h('div', { class: 'trend-wrap' }, [
+      segRow,
+      h('span', { class: 'trend-label', text: labelText + ' (' + pctText + ')' })
+    ]);
   }
 
   /* ============================================================
@@ -770,24 +835,29 @@
     renderChart(totalsByYear, yMin, yMax);
     renderGrowthRate(totalsByYear, yMin, yMax);
     renderCount(filtered);
-    renderTop3(filtered);
+    renderTop3(filtered, yMin, yMax);
     renderSelectionSummary(yMin, yMax);
   }
 
   function renderGrowthRate(totalsByYear, yMin, yMax) {
-    var years = [];
-    for (var y = yMin; y <= yMax; y++) years.push(y);
-    var changes = [];
-    for (var i = 1; i < years.length; i++) {
-      var prev = totalsByYear[years[i - 1]];
-      var cur = totalsByYear[years[i]];
-      if (prev !== 0 && isFinite(prev) && isFinite(cur)) changes.push((cur - prev) / prev);
+    var growthRateNoteEl = document.getElementById('growth-rate-note');
+    if (yMax === yMin) {
+      growthRateValueEl.textContent = '–';
+      growthRateValueEl.style.color = '';
+      growthRateNoteEl.textContent = 'Sélectionnez au moins deux années pour calculer un taux d’évolution.';
+      return;
     }
-    if (!changes.length) { growthRateValueEl.textContent = '–'; growthRateValueEl.style.color = ''; return; }
-    var avg = changes.reduce(function (a, b) { return a + b; }, 0) / changes.length;
-    var pct = avg * 100;
+    var cagr = computeCAGR(totalsByYear[yMin], totalsByYear[yMax], yMax - yMin);
+    if (!isFinite(cagr)) {
+      growthRateValueEl.textContent = '–';
+      growthRateValueEl.style.color = '';
+      growthRateNoteEl.textContent = 'Non calculable (valeur nulle en début de période pour cette sélection).';
+      return;
+    }
+    var pct = cagr * 100;
     growthRateValueEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + ' %';
     growthRateValueEl.style.color = pct >= 0 ? 'var(--efk-accent2)' : 'var(--efk-accent1)';
+    growthRateNoteEl.textContent = 'Taux de croissance annuel moyen (TCAM), méthode géométrique, entre ' + yMin + ' et ' + yMax + '.';
   }
 
   function renderCount(filtered) {
@@ -801,7 +871,7 @@
     countNoteEl.textContent = 'Nombre de « ' + primaryCol + ' » distinctes présentes dans la sélection actuelle.';
   }
 
-  function renderTop3(filtered) {
+  function renderTop3(filtered, yMin, yMax) {
     top3TitleEl.textContent = primaryCol ? 'Top 3 — ' + primaryCol : 'Top 3';
 
     top3ListEl.innerHTML = '';
@@ -811,25 +881,36 @@
       return;
     }
 
+    var nYears = yMax - yMin + 1;
     var sums = {};
     filtered.forEach(function (r) {
       var label = r[primaryCol];
-      if (!sums[label]) sums[label] = { label: label, sum: 0 };
+      if (!sums[label]) sums[label] = { label: label, sum: 0, byYear: {} };
       sums[label].sum += r.value;
+      sums[label].byYear[r.year] = (sums[label].byYear[r.year] || 0) + r.value;
     });
+    // Classement par somme totale sur la période : équivalent à un classement par moyenne
+    // (même nombre d'années pour toutes les entités), mais l'affichage montre la moyenne annuelle.
     var top3 = Object.keys(sums).map(function (k) { return sums[k]; }).sort(function (a, b) { return b.sum - a.sum; }).slice(0, 3);
 
     if (!top3.length) {
       top3ListEl.appendChild(h('li', { class: 'empty', text: 'Aucune donnée pour cette sélection.' }));
     } else {
       top3.forEach(function (item) {
+        var avg = item.sum / nYears;
+        var cagr = computeCAGR(item.byYear[yMin] || 0, item.byYear[yMax] || 0, yMax - yMin);
         top3ListEl.appendChild(h('li', {}, [
-          h('span', { class: 'top3-name', text: item.label || '(vide)' }),
-          h('span', { class: 'top3-sum', text: formatSwiss(item.sum) })
+          h('div', { class: 'top3-row' }, [
+            h('span', { class: 'top3-name', text: item.label || '(vide)' }),
+            h('span', { class: 'top3-sum', text: formatSwiss(avg) + ' / an' })
+          ]),
+          buildTrendGauge(cagr)
         ]));
       });
     }
-    top3NoteEl.textContent = 'Classement par somme sur la période sélectionnée (identique au classement par moyenne, le nombre d’années étant le même pour tous).';
+    top3NoteEl.textContent = 'Classement par somme sur la période sélectionnée (équivalent à un classement par moyenne). ' +
+      'Le montant affiché est la moyenne annuelle (moyenne arithmétique) ; la tendance ci-dessous est le taux de ' +
+      'croissance annuel moyen (TCAM, méthode géométrique) propre à chaque ligne entre ' + yMin + ' et ' + yMax + '.';
   }
 
   function renderSelectionSummary(yMin, yMax) {
