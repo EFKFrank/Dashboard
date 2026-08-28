@@ -153,15 +153,32 @@
   .trend-label { font-size: 11.5px; color: var(--efk-text-soft); white-space: nowrap; }
 
   .error-box { background: #faf1f0; border-left: 4px solid var(--efk-accent1); padding: 10px 16px; font-size: 14px; margin: 12px 0; color: var(--efk-text); }
+
+  /* ---- sélecteur de langue ---- */
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .lang-switch { display: flex; gap: 4px; flex-shrink: 0; }
+  .lang-btn {
+    font-family: var(--efk-font); font-size: 12.5px; font-weight: 700; letter-spacing: .03em;
+    padding: 5px 12px; border: 1px solid var(--efk-grey-dark); border-radius: 4px;
+    background: #fff; color: var(--efk-text-soft); cursor: pointer;
+  }
+  .lang-btn:hover { border-color: var(--efk-accent2); color: var(--efk-accent2); }
+  .lang-btn.active { background: var(--efk-accent2); color: #fff; border-color: var(--efk-accent2); }
 </style>
 </head>
 <body>
 <div class="app">
 
   <header class="app-header">
-    <p class="eyebrow">EFK · CDF — Outil d'analyse</p>
-    <h1>Tableau de bord dynamique</h1>
-    <p class="lede">
+    <div class="header-top">
+      <p class="eyebrow" data-i18n="eyebrow">EFK · CDF — Outil d'analyse</p>
+      <div class="lang-switch" role="group" aria-label="Langue / Sprache">
+        <button type="button" class="lang-btn active" id="lang-btn-fr" data-lang="fr">FR</button>
+        <button type="button" class="lang-btn" id="lang-btn-de" data-lang="de">DE</button>
+      </div>
+    </div>
+    <h1 data-i18n="mainTitle">Tableau de bord dynamique</h1>
+    <p class="lede" data-i18n-html="lede">
       Importez un fichier de données (CSV ou Excel) contenant au minimum une variable temporelle et une variable
       de valeur, et éventuellement une ou plusieurs variables catégorielles (par ex. département, canton, type).
       Une fois le fichier importé, <strong>saisissez la période à analyser</strong> à l'aide des deux menus
@@ -171,9 +188,9 @@
   </header>
 
   <section class="panel" id="import-section">
-    <h2>1. Importer vos données</h2>
+    <h2 data-i18n="importSectionTitle">1. Importer vos données</h2>
     <div class="dropzone" id="dropzone">
-      <p><strong>Cliquez pour choisir un fichier</strong> ou glissez-le ici — formats acceptés : .csv, .xlsx, .xls</p>
+      <p data-i18n-html="dropzoneHint"><strong>Cliquez pour choisir un fichier</strong> ou glissez-le ici — formats acceptés : .csv, .xlsx, .xls</p>
       <input type="file" id="file-input" accept=".csv,.xlsx,.xls">
     </div>
     <div id="sheet-picker-wrap"></div>
@@ -183,13 +200,13 @@
 
   <section class="panel" id="dashboard-section" hidden>
     <div class="toolbar">
-      <h2 style="margin:0;">2. Analyse</h2>
+      <h2 style="margin:0;" data-i18n="dashboardSectionTitle">2. Analyse</h2>
       <div>
         <span class="file-name" id="active-file-name"></span>
-        <button class="secondary" id="change-file-btn" type="button">Changer de fichier</button>
+        <button class="secondary" id="change-file-btn" type="button" data-i18n="changeFileBtn">Changer de fichier</button>
       </div>
     </div>
-    <p class="hint">
+    <p class="hint" data-i18n="dashboardHint">
       Choisissez la période à analyser, puis filtrez les variables catégorielles ci-dessous : le graphique et
       les statistiques ne portent que sur les valeurs cochées et se mettent à jour automatiquement.
     </p>
@@ -197,41 +214,46 @@
     <div class="controls-grid">
       <div class="period-control">
         <div class="field">
-          <label for="year-min">Année minimale</label>
+          <label for="year-min" data-i18n="yearMinLabel">Année minimale</label>
           <select id="year-min"></select>
         </div>
         <div class="field">
-          <label for="year-max">Année maximale</label>
+          <label for="year-max" data-i18n="yearMaxLabel">Année maximale</label>
           <select id="year-max"></select>
         </div>
       </div>
       <div id="category-controls"></div>
-      <button class="link reset-link" id="reset-filters-btn" type="button">Réinitialiser les filtres</button>
+      <button class="link reset-link" id="reset-filters-btn" type="button" data-i18n="resetFiltersBtn">Réinitialiser les filtres</button>
     </div>
 
     <div class="selection-summary" id="selection-summary"></div>
 
     <div class="main-grid">
       <div class="panel chart-card" style="margin-bottom:0;">
-        <h2>Évolution annuelle</h2>
+        <h2 data-i18n="chartTitle">Évolution annuelle</h2>
         <div class="chart-legend" id="chart-legend"></div>
         <div id="chart-container"></div>
       </div>
       <aside class="stats-col">
         <div class="stat-card">
-          <h3>Taux d'évolution moyen</h3>
+          <h3 data-i18n="growthRateTitle">Taux d'évolution moyen</h3>
           <p class="stat-value" id="growth-rate-value">–</p>
           <p class="stat-note" id="growth-rate-note"></p>
         </div>
         <div class="stat-card stat-card-compact">
-          <h3>Nombre de subventions dans la sélection</h3>
+          <h3 data-i18n="countTitle">Nombre de subventions dans la sélection</h3>
           <p class="stat-value" id="count-value">–</p>
           <p class="stat-note" id="count-note"></p>
         </div>
         <div class="stat-card">
-          <h3 id="top3-title">Top 3</h3>
+          <h3 id="top3-title" data-i18n="top3TitleDefault">Top 3 (volume)</h3>
           <ol id="top3-list"></ol>
           <p class="stat-note" id="top3-note"></p>
+        </div>
+        <div class="stat-card">
+          <h3 id="top3-growth-title" data-i18n="top3GrowthTitleDefault">Top 3 (croissance)</h3>
+          <ol id="top3-growth-list"></ol>
+          <p class="stat-note" id="top3-growth-note"></p>
         </div>
       </aside>
     </div>
@@ -242,6 +264,230 @@
 <script>
 (function () {
   'use strict';
+
+  /* ============================================================
+   * Internationalisation (FR / DE)
+   * ========================================================== */
+  var I18N = {
+    fr: {
+      pageTitle: 'Tableau de bord — Analyse de subventions',
+      eyebrow: 'EFK · CDF — Outil d’analyse',
+      mainTitle: 'Tableau de bord dynamique',
+      lede: 'Importez un fichier de données (CSV ou Excel) contenant au minimum une variable temporelle et une ' +
+        'variable de valeur, et éventuellement une ou plusieurs variables catégorielles (par ex. département, ' +
+        'canton, type). Une fois le fichier importé, <strong>saisissez la période à analyser</strong> à l’aide ' +
+        'des deux menus « année minimale » et « année maximale » : par défaut, l’ensemble de la période ' +
+        'disponible dans vos données est affiché.',
+      importSectionTitle: '1. Importer vos données',
+      dropzoneHint: '<strong>Cliquez pour choisir un fichier</strong> ou glissez-le ici — formats acceptés : .csv, .xlsx, .xls',
+      dashboardSectionTitle: '2. Analyse',
+      changeFileBtn: 'Changer de fichier',
+      dashboardHint: 'Choisissez la période à analyser, puis filtrez les variables catégorielles ci-dessous : le ' +
+        'graphique et les statistiques ne portent que sur les valeurs cochées et se mettent à jour automatiquement.',
+      yearMinLabel: 'Année minimale',
+      yearMaxLabel: 'Année maximale',
+      resetFiltersBtn: 'Réinitialiser les filtres',
+      chartTitle: 'Évolution annuelle',
+      growthRateTitle: 'Taux d’évolution moyen',
+      countTitle: 'Nombre de subventions dans la sélection',
+      top3TitleDefault: 'Top 3 (volume)',
+      top3TitleWithCol: 'Top 3 (volume) — {col}',
+      top3GrowthTitleDefault: 'Top 3 (croissance)',
+      top3GrowthTitleWithCol: 'Top 3 (croissance) — {col}',
+      sheetPickerLabel: 'Ce fichier contient plusieurs feuilles — laquelle utiliser ?',
+      loadSheetBtn: 'Charger cette feuille',
+      errCannotRead: 'Impossible de lire ce fichier : ',
+      errReadFile: 'Erreur de lecture du fichier.',
+      errEmptySheet: 'Cette feuille est vide.',
+      errNoData: 'Aucune donnée exploitable trouvée dans cette feuille.',
+      errChooseYearValueCol: 'Merci de choisir une colonne Année et une colonne Valeur.',
+      errCheckYearCol: 'Merci de cocher au moins une colonne représentant une année.',
+      errNoUsableRows: 'Aucune ligne exploitable après import (vérifiez les colonnes choisies).',
+      wizardTimeModeTitle: 'Comment votre variable temporelle est-elle représentée ?',
+      wizardModeLongLabel: 'Une seule colonne contient l’année',
+      wizardModeWideLabel: 'Les années sont réparties sur plusieurs colonnes',
+      yearColLabel: 'Colonne « Année »',
+      valueColLabel: 'Colonne « Valeur » (montant à analyser)',
+      wideHint: 'Cochez les colonnes qui représentent chacune une année :',
+      catVarsTitle: 'Variables catégorielles',
+      catVarsHint: 'Décochez une colonne pour l’ignorer complètement, ou choisissez de la fusionner (affichée ' +
+        'entre parenthèses) avec une autre colonne.',
+      mergeNone: 'Aucune',
+      includeAsCategory: 'Inclure comme catégorie',
+      mergeWithLabel: 'Fusionner (entre parenthèses) avec :',
+      noRemainingCatCols: 'Aucune colonne restante à classer comme variable catégorielle.',
+      primaryColTitle: 'Variable catégorielle principale (nom affiché dans le top 3 par défaut)',
+      validateBtn: 'Valider et générer le tableau de bord',
+      emptyValue: '(vide)',
+      selectAllBtn: 'Tout',
+      selectNoneBtn: 'Aucun',
+      growthNeedTwoYears: 'Sélectionnez au moins deux années pour calculer un taux d’évolution.',
+      growthNotComputable: 'Non calculable (valeur nulle en début de période pour cette sélection).',
+      growthNote: 'Taux de croissance annuel moyen (TCAM), méthode géométrique, entre {yMin} et {yMax}.',
+      countNote: 'Nombre de « {col} » distinctes présentes dans la sélection actuelle.',
+      top3NoCatVar: 'Aucune variable catégorielle disponible pour ce classement.',
+      top3NoData: 'Aucune donnée pour cette sélection.',
+      perYearSuffix: ' / an',
+      top3Note: 'Classement par somme sur la période sélectionnée (équivalent à un classement par moyenne). Le ' +
+        'montant affiché est la moyenne annuelle (moyenne arithmétique) ; la tendance ci-dessous est le taux de ' +
+        'croissance annuel moyen (TCAM, méthode géométrique) propre à chaque ligne entre {yMin} et {yMax}.',
+      top3GrowthNoData: 'Aucune subvention avec une croissance calculable pour cette sélection.',
+      top3GrowthNote: 'Classement par taux de croissance annuel moyen (TCAM, méthode géométrique) entre {yMin} ' +
+        'et {yMax}, à distinguer du classement par volume ci-dessus. Seules les entrées avec une valeur de ' +
+        'départ positive sont prises en compte.',
+      currentSelectionLabel: 'Votre sélection actuelle — ',
+      periodLabel: 'Période : {yMin}–{yMax}',
+      colonSeparator: ' : ',
+      allValuesSuffix: ' : toutes ({total})',
+      noValueSuffix: ' : aucune valeur',
+      selectedOfTotalSuffix: ' : {selected} / {total} sélectionnées',
+      legendAmount: 'Montant annuel',
+      legendTrend: 'Tendance (TCAM {pct} %/an)',
+      trendTooltip: 'Tendance {year} : {val}',
+      trendStrongDown: 'Forte baisse',
+      trendDown: 'Baisse modérée',
+      trendFlat: 'Stable',
+      trendUp: 'Hausse modérée',
+      trendStrongUp: 'Forte hausse',
+      trendNotAvailable: 'n.d.',
+      trendNotComputable: 'Non calculable',
+      perYearPctSuffix: ' %/an'
+    },
+    de: {
+      pageTitle: 'Dashboard — Subventionsanalyse',
+      eyebrow: 'EFK · CDF — Analysetool',
+      mainTitle: 'Dynamisches Dashboard',
+      lede: 'Importieren Sie eine Datendatei (CSV oder Excel) mit mindestens einer Zeitvariable und einer ' +
+        'Wertvariable sowie optional einer oder mehreren kategorialen Variablen (z. B. Abteilung, Kanton, Typ). ' +
+        'Nach dem Import <strong>legen Sie den zu analysierenden Zeitraum fest</strong> über die beiden Menüs ' +
+        '«Minimales Jahr» und «Maximales Jahr»: Standardmässig wird der gesamte in Ihren Daten verfügbare ' +
+        'Zeitraum angezeigt.',
+      importSectionTitle: '1. Daten importieren',
+      dropzoneHint: '<strong>Klicken Sie, um eine Datei auszuwählen</strong>, oder ziehen Sie sie hierher — ' +
+        'unterstützte Formate: .csv, .xlsx, .xls',
+      dashboardSectionTitle: '2. Analyse',
+      changeFileBtn: 'Datei wechseln',
+      dashboardHint: 'Wählen Sie den zu analysierenden Zeitraum und filtern Sie die kategorialen Variablen ' +
+        'unten: Das Diagramm und die Statistiken berücksichtigen nur die angekreuzten Werte und aktualisieren ' +
+        'sich automatisch.',
+      yearMinLabel: 'Minimales Jahr',
+      yearMaxLabel: 'Maximales Jahr',
+      resetFiltersBtn: 'Filter zurücksetzen',
+      chartTitle: 'Jährliche Entwicklung',
+      growthRateTitle: 'Durchschnittliche Wachstumsrate',
+      countTitle: 'Anzahl Subventionen in der Auswahl',
+      top3TitleDefault: 'Top 3 (Volumen)',
+      top3TitleWithCol: 'Top 3 (Volumen) — {col}',
+      top3GrowthTitleDefault: 'Top 3 (Wachstum)',
+      top3GrowthTitleWithCol: 'Top 3 (Wachstum) — {col}',
+      sheetPickerLabel: 'Diese Datei enthält mehrere Tabellenblätter — welches soll verwendet werden?',
+      loadSheetBtn: 'Dieses Blatt laden',
+      errCannotRead: 'Datei kann nicht gelesen werden: ',
+      errReadFile: 'Fehler beim Lesen der Datei.',
+      errEmptySheet: 'Dieses Tabellenblatt ist leer.',
+      errNoData: 'In diesem Tabellenblatt wurden keine verwertbaren Daten gefunden.',
+      errChooseYearValueCol: 'Bitte wählen Sie eine Jahr-Spalte und eine Wert-Spalte aus.',
+      errCheckYearCol: 'Bitte kreuzen Sie mindestens eine Spalte an, die ein Jahr darstellt.',
+      errNoUsableRows: 'Nach dem Import sind keine verwertbaren Zeilen vorhanden (überprüfen Sie die gewählten Spalten).',
+      wizardTimeModeTitle: 'Wie ist Ihre Zeitvariable dargestellt?',
+      wizardModeLongLabel: 'Eine einzige Spalte enthält das Jahr',
+      wizardModeWideLabel: 'Die Jahre sind auf mehrere Spalten verteilt',
+      yearColLabel: 'Spalte «Jahr»',
+      valueColLabel: 'Spalte «Wert» (zu analysierender Betrag)',
+      wideHint: 'Kreuzen Sie die Spalten an, die je ein Jahr darstellen:',
+      catVarsTitle: 'Kategoriale Variablen',
+      catVarsHint: 'Deaktivieren Sie eine Spalte, um sie vollständig zu ignorieren, oder fassen Sie sie (in ' +
+        'Klammern angezeigt) mit einer anderen Spalte zusammen.',
+      mergeNone: 'Keine',
+      includeAsCategory: 'Als Kategorie einschliessen',
+      mergeWithLabel: 'Zusammenfassen (in Klammern) mit:',
+      noRemainingCatCols: 'Keine verbleibende Spalte zur Einstufung als kategoriale Variable.',
+      primaryColTitle: 'Primäre kategoriale Variable (Standardname in den Top 3)',
+      validateBtn: 'Bestätigen und Dashboard erstellen',
+      emptyValue: '(leer)',
+      selectAllBtn: 'Alle',
+      selectNoneBtn: 'Keine',
+      growthNeedTwoYears: 'Wählen Sie mindestens zwei Jahre aus, um eine Wachstumsrate zu berechnen.',
+      growthNotComputable: 'Nicht berechenbar (Nullwert zu Beginn des Zeitraums für diese Auswahl).',
+      growthNote: 'Durchschnittliche jährliche Wachstumsrate (CAGR), geometrische Methode, zwischen {yMin} und {yMax}.',
+      countNote: 'Anzahl unterschiedlicher «{col}» in der aktuellen Auswahl.',
+      top3NoCatVar: 'Keine kategoriale Variable für diese Rangliste verfügbar.',
+      top3NoData: 'Keine Daten für diese Auswahl.',
+      perYearSuffix: ' / Jahr',
+      top3Note: 'Rangliste nach Summe über den gewählten Zeitraum (entspricht einer Rangliste nach ' +
+        'Durchschnitt). Der angezeigte Betrag ist der Jahresdurchschnitt (arithmetisches Mittel); die Tendenz ' +
+        'unten ist die für jede Zeile spezifische durchschnittliche jährliche Wachstumsrate (CAGR, geometrische ' +
+        'Methode) zwischen {yMin} und {yMax}.',
+      top3GrowthNoData: 'Keine Subvention mit berechenbarem Wachstum für diese Auswahl.',
+      top3GrowthNote: 'Rangliste nach durchschnittlicher jährlicher Wachstumsrate (CAGR, geometrische Methode) ' +
+        'zwischen {yMin} und {yMax}, im Unterschied zur Rangliste nach Volumen oben. Berücksichtigt werden nur ' +
+        'Einträge mit einem positiven Ausgangswert.',
+      currentSelectionLabel: 'Ihre aktuelle Auswahl — ',
+      periodLabel: 'Zeitraum: {yMin}–{yMax}',
+      colonSeparator: ': ',
+      allValuesSuffix: ': alle ({total})',
+      noValueSuffix: ': kein Wert',
+      selectedOfTotalSuffix: ': {selected} / {total} ausgewählt',
+      legendAmount: 'Jahresbetrag',
+      legendTrend: 'Tendenz (CAGR {pct} %/Jahr)',
+      trendTooltip: 'Tendenz {year}: {val}',
+      trendStrongDown: 'Starker Rückgang',
+      trendDown: 'Moderater Rückgang',
+      trendFlat: 'Stabil',
+      trendUp: 'Moderater Anstieg',
+      trendStrongUp: 'Starker Anstieg',
+      trendNotAvailable: 'n. v.',
+      trendNotComputable: 'Nicht berechenbar',
+      perYearPctSuffix: ' %/Jahr'
+    }
+  };
+
+  var currentLang = 'fr';
+  try {
+    var storedLang = window.localStorage.getItem('efk-dashboard-lang');
+    if (storedLang === 'fr' || storedLang === 'de') currentLang = storedLang;
+  } catch (e) { /* localStorage indisponible (contexte restreint) — on garde le défaut */ }
+
+  function t(key, vars) {
+    var dict = I18N[currentLang] || I18N.fr;
+    var str = dict[key] !== undefined ? dict[key] : (I18N.fr[key] !== undefined ? I18N.fr[key] : key);
+    if (vars) {
+      Object.keys(vars).forEach(function (k) {
+        str = str.split('{' + k + '}').join(String(vars[k]));
+      });
+    }
+    return str;
+  }
+
+  function applyTranslations() {
+    document.documentElement.lang = currentLang;
+    document.title = t('pageTitle');
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
+      el.innerHTML = t(el.getAttribute('data-i18n-html'));
+    });
+    document.getElementById('lang-btn-fr').classList.toggle('active', currentLang === 'fr');
+    document.getElementById('lang-btn-de').classList.toggle('active', currentLang === 'de');
+  }
+
+  function setLang(lang) {
+    if (lang !== 'fr' && lang !== 'de') return;
+    currentLang = lang;
+    try { window.localStorage.setItem('efk-dashboard-lang', lang); } catch (e) { /* ignoré */ }
+    applyTranslations();
+    // Les zones déjà générées dynamiquement (contrôles de catégories, graphique,
+    // statistiques) sont reconstruites dans la nouvelle langue sans toucher aux
+    // filtres ni aux sélections en cours.
+    if (!dashboardSection.hidden) {
+      renderCategoryControls();
+      recompute();
+    }
+  }
+
+  document.getElementById('lang-btn-fr').addEventListener('click', function () { setLang('fr'); });
+  document.getElementById('lang-btn-de').addEventListener('click', function () { setLang('de'); });
 
   /* ============================================================
    * Utilitaires
@@ -364,11 +610,11 @@
 
   // Classement du TCAM sur une échelle à 5 niveaux, pour une lecture visuelle rapide.
   var TREND_LEVELS = [
-    { level: -2, symbol: '▼▼', cls: 'trend-strong-down', text: 'Forte baisse' },
-    { level: -1, symbol: '▼',  cls: 'trend-down',         text: 'Baisse modérée' },
-    { level: 0,  symbol: '▬',  cls: 'trend-flat',          text: 'Stable' },
-    { level: 1,  symbol: '▲',  cls: 'trend-up',            text: 'Hausse modérée' },
-    { level: 2,  symbol: '▲▲', cls: 'trend-strong-up',     text: 'Forte hausse' }
+    { level: -2, symbol: '▼▼', cls: 'trend-strong-down', key: 'trendStrongDown' },
+    { level: -1, symbol: '▼',  cls: 'trend-down',         key: 'trendDown' },
+    { level: 0,  symbol: '▬',  cls: 'trend-flat',          key: 'trendFlat' },
+    { level: 1,  symbol: '▲',  cls: 'trend-up',            key: 'trendUp' },
+    { level: 2,  symbol: '▲▲', cls: 'trend-strong-up',     key: 'trendStrongUp' }
   ];
   function classifyTrend(cagr) {
     if (!isFinite(cagr)) return null;
@@ -392,8 +638,8 @@
       segRow.appendChild(h('span', { class: 'trend-seg' + (active ? ' active ' + lv.cls : ''), text: lv.symbol }));
     });
 
-    var pctText = info ? (info.pct >= 0 ? '+' : '') + info.pct.toFixed(1) + ' %/an' : 'n.d.';
-    var labelText = matched ? matched.text : 'Non calculable';
+    var pctText = info ? (info.pct >= 0 ? '+' : '') + info.pct.toFixed(1) + t('perYearPctSuffix') : t('trendNotAvailable');
+    var labelText = matched ? t(matched.key) : t('trendNotComputable');
 
     return h('div', { class: 'trend-wrap' }, [
       segRow,
@@ -459,7 +705,7 @@
           wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
         }
       } catch (err) {
-        showError('Impossible de lire ce fichier : ' + err.message);
+        showError(t('errCannotRead') + err.message);
         return;
       }
       workbookRef = wb;
@@ -469,17 +715,17 @@
         loadSheet(wb.SheetNames[0]);
       }
     };
-    reader.onerror = function () { showError('Erreur de lecture du fichier.'); };
+    reader.onerror = function () { showError(t('errReadFile')); };
     reader.readAsArrayBuffer(file);
   }
 
   function renderSheetPicker(names) {
     var select = h('select', { id: 'sheet-select' });
     names.forEach(function (n) { select.appendChild(h('option', { value: n, text: n })); });
-    var btn = h('button', { type: 'button', text: 'Charger cette feuille', onclick: function () { loadSheet(select.value); } });
+    var btn = h('button', { type: 'button', text: t('loadSheetBtn'), 'data-i18n': 'loadSheetBtn', onclick: function () { loadSheet(select.value); } });
     sheetPickerWrap.innerHTML = '';
     sheetPickerWrap.appendChild(h('div', { class: 'field-row', style: 'margin:14px 0;' }, [
-      h('div', { class: 'field' }, [h('label', { text: 'Ce fichier contient plusieurs feuilles — laquelle utiliser ?' }), select]),
+      h('div', { class: 'field' }, [h('label', { text: t('sheetPickerLabel'), 'data-i18n': 'sheetPickerLabel' }), select]),
       btn
     ]));
   }
@@ -487,7 +733,7 @@
   function loadSheet(sheetName) {
     var sheet = workbookRef.Sheets[sheetName];
     var rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
-    if (!rows.length) { showError('Cette feuille est vide.'); return; }
+    if (!rows.length) { showError(t('errEmptySheet')); return; }
     rawHeaders = rows[0].map(function (x) { return String(x).trim(); }).filter(function (x) { return x !== ''; });
     var headerCount = rows[0].length;
     rawRows = rows.slice(1)
@@ -501,7 +747,7 @@
         }
         return obj;
       });
-    if (!rawHeaders.length || !rawRows.length) { showError('Aucune donnée exploitable trouvée dans cette feuille.'); return; }
+    if (!rawHeaders.length || !rawRows.length) { showError(t('errNoData')); return; }
     renderWizard();
   }
 
@@ -553,8 +799,8 @@
     if (valueGuess) valueColSelect.value = valueGuess;
 
     longOptionsBox.appendChild(h('div', { class: 'field-row' }, [
-      h('div', { class: 'field' }, [h('label', { text: 'Colonne « Année »' }), yearColSelect]),
-      h('div', { class: 'field' }, [h('label', { text: 'Colonne « Valeur » (montant à analyser)' }), valueColSelect])
+      h('div', { class: 'field' }, [h('label', { text: t('yearColLabel'), 'data-i18n': 'yearColLabel' }), yearColSelect]),
+      h('div', { class: 'field' }, [h('label', { text: t('valueColLabel'), 'data-i18n': 'valueColLabel' }), valueColSelect])
     ]));
 
     // -- wide mode: year-columns checkboxes --
@@ -564,7 +810,7 @@
       if (isYearHeader(col)) cb.checked = true;
       yearColsBox.appendChild(h('label', {}, [cb, document.createTextNode(col)]));
     });
-    wideOptionsBox.appendChild(h('p', { class: 'hint', text: 'Cochez les colonnes qui représentent chacune une année :' }));
+    wideOptionsBox.appendChild(h('p', { class: 'hint', text: t('wideHint'), 'data-i18n': 'wideHint' }));
     wideOptionsBox.appendChild(yearColsBox);
 
     yearColSelect.addEventListener('change', renderCategoricalConfig);
@@ -586,7 +832,7 @@
       var reserved = getReservedCols();
       var candidateCols = rawHeaders.filter(function (c) { return reserved.indexOf(c) === -1; });
       if (!candidateCols.length) {
-        catConfigBox.appendChild(h('p', { class: 'hint', text: 'Aucune colonne restante à classer comme variable catégorielle.' }));
+        catConfigBox.appendChild(h('p', { class: 'hint', text: t('noRemainingCatCols'), 'data-i18n': 'noRemainingCatCols' }));
         renderPrimarySelector([]);
         return;
       }
@@ -597,7 +843,7 @@
 
         var mergeSelect = h('select', { class: 'cat-merge-select' });
         mergeSelect.dataset.col = col;
-        mergeSelect.appendChild(h('option', { value: '', text: 'Aucune' }));
+        mergeSelect.appendChild(h('option', { value: '', text: t('mergeNone'), 'data-i18n': 'mergeNone' }));
         candidateCols.forEach(function (other) {
           if (other === col) return;
           mergeSelect.appendChild(h('option', { value: other, text: other }));
@@ -612,8 +858,8 @@
 
         catConfigBox.appendChild(h('div', { class: 'col-config-row' }, [
           h('span', { class: 'col-name', text: col }),
-          h('label', {}, [includeCb, document.createTextNode('Inclure comme catégorie')]),
-          h('label', {}, [document.createTextNode('Fusionner (entre parenthèses) avec :'), mergeSelect])
+          h('label', {}, [includeCb, h('span', { text: t('includeAsCategory'), 'data-i18n': 'includeAsCategory' })]),
+          h('label', {}, [h('span', { text: t('mergeWithLabel'), 'data-i18n': 'mergeWithLabel' }), mergeSelect])
         ]));
       });
       updatePrimaryOptions();
@@ -638,7 +884,7 @@
     function renderPrimarySelector(finalCats) {
       primaryBox.innerHTML = '';
       if (finalCats.length === 0) return;
-      primaryBox.appendChild(h('h3', { text: 'Variable catégorielle principale (nom affiché dans le top 3 par défaut)' }));
+      primaryBox.appendChild(h('h3', { text: t('primaryColTitle'), 'data-i18n': 'primaryColTitle' }));
       finalCats.forEach(function (col, i) {
         var radio = h('input', { type: 'radio', name: 'primary-col', value: col });
         if (i === 0) radio.checked = true;
@@ -648,15 +894,15 @@
 
     renderCategoricalConfig();
 
-    var validateBtn = h('button', { type: 'button', text: 'Valider et générer le tableau de bord', onclick: onValidateImport });
+    var validateBtn = h('button', { type: 'button', text: t('validateBtn'), 'data-i18n': 'validateBtn', onclick: onValidateImport });
 
-    wizardWrap.appendChild(h('h3', { text: 'Comment votre variable temporelle est-elle représentée ?' }));
-    wizardWrap.appendChild(h('label', { class: 'radio-opt' }, [modeLong, document.createTextNode('Une seule colonne contient l’année')]));
-    wizardWrap.appendChild(h('label', { class: 'radio-opt' }, [modeWide, document.createTextNode('Les années sont réparties sur plusieurs colonnes')]));
+    wizardWrap.appendChild(h('h3', { text: t('wizardTimeModeTitle'), 'data-i18n': 'wizardTimeModeTitle' }));
+    wizardWrap.appendChild(h('label', { class: 'radio-opt' }, [modeLong, h('span', { text: t('wizardModeLongLabel'), 'data-i18n': 'wizardModeLongLabel' })]));
+    wizardWrap.appendChild(h('label', { class: 'radio-opt' }, [modeWide, h('span', { text: t('wizardModeWideLabel'), 'data-i18n': 'wizardModeWideLabel' })]));
     wizardWrap.appendChild(longOptionsBox);
     wizardWrap.appendChild(wideOptionsBox);
-    wizardWrap.appendChild(h('h3', { text: 'Variables catégorielles' }));
-    wizardWrap.appendChild(h('p', { class: 'hint', text: 'Décochez une colonne pour l’ignorer complètement, ou choisissez de la fusionner (affichée entre parenthèses) avec une autre colonne.' }));
+    wizardWrap.appendChild(h('h3', { text: t('catVarsTitle'), 'data-i18n': 'catVarsTitle' }));
+    wizardWrap.appendChild(h('p', { class: 'hint', text: t('catVarsHint'), 'data-i18n': 'catVarsHint' }));
     wizardWrap.appendChild(catConfigBox);
     wizardWrap.appendChild(primaryBox);
     wizardWrap.appendChild(h('div', { class: 'wizard-actions' }, [validateBtn]));
@@ -689,15 +935,15 @@
       var built;
       if (mode === 'long') {
         var yearCol = yearColSelect.value, valueCol = valueColSelect.value;
-        if (!yearCol || !valueCol) { showError('Merci de choisir une colonne Année et une colonne Valeur.'); return; }
+        if (!yearCol || !valueCol) { showError(t('errChooseYearValueCol')); return; }
         built = buildLongData_long(yearCol, valueCol, rawCatCols, mergeMap);
       } else {
         var yearCols = Array.prototype.slice.call(yearColsBox.querySelectorAll('.year-col-checkbox:checked')).map(function (cb) { return cb.value; });
-        if (!yearCols.length) { showError('Merci de cocher au moins une colonne représentant une année.'); return; }
+        if (!yearCols.length) { showError(t('errCheckYearCol')); return; }
         built = buildLongData_wide(yearCols, rawCatCols, mergeMap);
       }
 
-      if (!built.length) { showError('Aucune ligne exploitable après import (vérifiez les colonnes choisies).'); return; }
+      if (!built.length) { showError(t('errNoUsableRows')); return; }
 
       longData = built;
       categoricalCols = finalCats;
@@ -765,6 +1011,9 @@
   var top3TitleEl = document.getElementById('top3-title');
   var top3ListEl = document.getElementById('top3-list');
   var top3NoteEl = document.getElementById('top3-note');
+  var top3GrowthTitleEl = document.getElementById('top3-growth-title');
+  var top3GrowthListEl = document.getElementById('top3-growth-list');
+  var top3GrowthNoteEl = document.getElementById('top3-growth-note');
   var selectionSummaryEl = document.getElementById('selection-summary');
   var dashboardSection = document.getElementById('dashboard-section');
   var importSection = document.getElementById('import-section');
@@ -832,16 +1081,16 @@
           recompute();
         });
         checkboxes.push(cb);
-        var labelText = val === '' ? '(vide)' : val;
+        var labelText = val === '' ? t('emptyValue') : val;
         valuesBox.appendChild(h('label', {}, [cb, document.createTextNode(labelText)]));
       });
 
-      var selectAllBtn = h('button', { class: 'link', type: 'button', text: 'Tout', onclick: function () {
+      var selectAllBtn = h('button', { class: 'link', type: 'button', text: t('selectAllBtn'), 'data-i18n': 'selectAllBtn', onclick: function () {
         checkboxes.forEach(function (cb) { cb.checked = true; });
         filters[col] = new Set(values);
         recompute();
       } });
-      var selectNoneBtn = h('button', { class: 'link', type: 'button', text: 'Aucun', onclick: function () {
+      var selectNoneBtn = h('button', { class: 'link', type: 'button', text: t('selectNoneBtn'), 'data-i18n': 'selectNoneBtn', onclick: function () {
         checkboxes.forEach(function (cb) { cb.checked = false; });
         filters[col] = new Set();
         recompute();
@@ -878,6 +1127,7 @@
     renderGrowthRate(totalsByYear, yMin, yMax);
     renderCount(filtered);
     renderTop3(filtered, yMin, yMax);
+    renderTop3Growth(filtered, yMin, yMax);
     renderSelectionSummary(yMin, yMax);
   }
 
@@ -886,20 +1136,20 @@
     if (yMax === yMin) {
       growthRateValueEl.textContent = '–';
       growthRateValueEl.style.color = '';
-      growthRateNoteEl.textContent = 'Sélectionnez au moins deux années pour calculer un taux d’évolution.';
+      growthRateNoteEl.textContent = t('growthNeedTwoYears');
       return;
     }
     var cagr = computeCAGR(totalsByYear[yMin], totalsByYear[yMax], yMax - yMin);
     if (!isFinite(cagr)) {
       growthRateValueEl.textContent = '–';
       growthRateValueEl.style.color = '';
-      growthRateNoteEl.textContent = 'Non calculable (valeur nulle en début de période pour cette sélection).';
+      growthRateNoteEl.textContent = t('growthNotComputable');
       return;
     }
     var pct = cagr * 100;
     growthRateValueEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + ' %';
     growthRateValueEl.style.color = pct >= 0 ? 'var(--efk-accent2)' : 'var(--efk-accent1)';
-    growthRateNoteEl.textContent = 'Taux de croissance annuel moyen (TCAM), méthode géométrique, entre ' + yMin + ' et ' + yMax + '.';
+    growthRateNoteEl.textContent = t('growthNote', { yMin: yMin, yMax: yMax });
   }
 
   function renderCount(filtered) {
@@ -910,20 +1160,13 @@
     }
     var distinct = new Set(filtered.map(function (r) { return r[primaryCol]; }));
     countValueEl.textContent = String(distinct.size);
-    countNoteEl.textContent = 'Nombre de « ' + primaryCol + ' » distinctes présentes dans la sélection actuelle.';
+    countNoteEl.textContent = t('countNote', { col: primaryCol });
   }
 
-  function renderTop3(filtered, yMin, yMax) {
-    top3TitleEl.textContent = primaryCol ? 'Top 3 — ' + primaryCol : 'Top 3';
-
-    top3ListEl.innerHTML = '';
-    if (!primaryCol) {
-      top3ListEl.appendChild(h('li', { class: 'empty', text: 'Aucune variable catégorielle disponible pour ce classement.' }));
-      top3NoteEl.textContent = '';
-      return;
-    }
-
-    var nYears = yMax - yMin + 1;
+  // Regroupe les lignes filtrées par variable catégorielle principale, avec la somme
+  // par année pour chaque entité (utilisé à la fois par le classement en volume et par
+  // le classement en croissance).
+  function groupByPrimaryCol(filtered) {
     var sums = {};
     filtered.forEach(function (r) {
       var label = r[primaryCol];
@@ -931,28 +1174,86 @@
       sums[label].sum += r.value;
       sums[label].byYear[r.year] = (sums[label].byYear[r.year] || 0) + r.value;
     });
+    return sums;
+  }
+
+  function renderTop3(filtered, yMin, yMax) {
+    top3TitleEl.textContent = primaryCol ? t('top3TitleWithCol', { col: primaryCol }) : t('top3TitleDefault');
+
+    top3ListEl.innerHTML = '';
+    if (!primaryCol) {
+      top3ListEl.appendChild(h('li', { class: 'empty', text: t('top3NoCatVar') }));
+      top3NoteEl.textContent = '';
+      return;
+    }
+
+    var nYears = yMax - yMin + 1;
+    var sums = groupByPrimaryCol(filtered);
     // Classement par somme totale sur la période : équivalent à un classement par moyenne
     // (même nombre d'années pour toutes les entités), mais l'affichage montre la moyenne annuelle.
     var top3 = Object.keys(sums).map(function (k) { return sums[k]; }).sort(function (a, b) { return b.sum - a.sum; }).slice(0, 3);
 
     if (!top3.length) {
-      top3ListEl.appendChild(h('li', { class: 'empty', text: 'Aucune donnée pour cette sélection.' }));
+      top3ListEl.appendChild(h('li', { class: 'empty', text: t('top3NoData') }));
     } else {
       top3.forEach(function (item) {
         var avg = item.sum / nYears;
         var cagr = computeCAGR(item.byYear[yMin] || 0, item.byYear[yMax] || 0, yMax - yMin);
         top3ListEl.appendChild(h('li', {}, [
           h('div', { class: 'top3-row' }, [
-            h('span', { class: 'top3-name', text: item.label || '(vide)' }),
-            h('span', { class: 'top3-sum', text: formatSwiss(avg) + ' / an' })
+            h('span', { class: 'top3-name', text: item.label || t('emptyValue') }),
+            h('span', { class: 'top3-sum', text: formatSwiss(avg) + t('perYearSuffix') })
           ]),
           buildTrendGauge(cagr)
         ]));
       });
     }
-    top3NoteEl.textContent = 'Classement par somme sur la période sélectionnée (équivalent à un classement par moyenne). ' +
-      'Le montant affiché est la moyenne annuelle (moyenne arithmétique) ; la tendance ci-dessous est le taux de ' +
-      'croissance annuel moyen (TCAM, méthode géométrique) propre à chaque ligne entre ' + yMin + ' et ' + yMax + '.';
+    top3NoteEl.textContent = t('top3Note', { yMin: yMin, yMax: yMax });
+  }
+
+  // Classement des entités (variable catégorielle principale) par taux de croissance
+  // annuel moyen (TCAM) entre la première et la dernière année de la période sélectionnée
+  // — à distinguer du top 3 par volume ci-dessus, qui classe par somme/moyenne sur la
+  // période. Seules les entités avec un TCAM calculable (valeur de départ strictement
+  // positive) entrent dans ce classement.
+  function renderTop3Growth(filtered, yMin, yMax) {
+    top3GrowthTitleEl.textContent = primaryCol ? t('top3GrowthTitleWithCol', { col: primaryCol }) : t('top3GrowthTitleDefault');
+
+    top3GrowthListEl.innerHTML = '';
+    if (!primaryCol) {
+      top3GrowthListEl.appendChild(h('li', { class: 'empty', text: t('top3NoCatVar') }));
+      top3GrowthNoteEl.textContent = '';
+      return;
+    }
+    if (yMax === yMin) {
+      top3GrowthListEl.appendChild(h('li', { class: 'empty', text: t('growthNeedTwoYears') }));
+      top3GrowthNoteEl.textContent = '';
+      return;
+    }
+
+    var sums = groupByPrimaryCol(filtered);
+    var ranked = Object.keys(sums).map(function (k) {
+      var item = sums[k];
+      var cagr = computeCAGR(item.byYear[yMin] || 0, item.byYear[yMax] || 0, yMax - yMin);
+      return { label: item.label, cagr: cagr };
+    }).filter(function (item) { return isFinite(item.cagr); });
+
+    var top3Growth = ranked.sort(function (a, b) { return b.cagr - a.cagr; }).slice(0, 3);
+
+    if (!top3Growth.length) {
+      top3GrowthListEl.appendChild(h('li', { class: 'empty', text: t('top3GrowthNoData') }));
+    } else {
+      top3Growth.forEach(function (item) {
+        var pct = item.cagr * 100;
+        top3GrowthListEl.appendChild(h('li', {}, [
+          h('div', { class: 'top3-row' }, [
+            h('span', { class: 'top3-name', text: item.label || t('emptyValue') }),
+            h('span', { class: 'top3-sum', text: (pct >= 0 ? '+' : '') + pct.toFixed(1) + ' %' })
+          ])
+        ]));
+      });
+    }
+    top3GrowthNoteEl.textContent = t('top3GrowthNote', { yMin: yMin, yMax: yMax });
   }
 
   function renderSelectionSummary(yMin, yMax) {
@@ -963,21 +1264,21 @@
       var selected = filters[col] ? filters[col].size : 0;
       var text;
       if (selected === total) {
-        text = col + ' : toutes (' + total + ')';
+        text = col + t('allValuesSuffix', { total: total });
       } else if (selected === 0) {
-        text = col + ' : aucune valeur';
+        text = col + t('noValueSuffix');
       } else if (selected <= 3) {
-        var labels = localeSort(Array.from(filters[col])).map(function (v) { return v === '' ? '(vide)' : v; });
-        text = col + ' : ' + labels.join(', ');
+        var labels = localeSort(Array.from(filters[col])).map(function (v) { return v === '' ? t('emptyValue') : v; });
+        text = col + t('colonSeparator') + labels.join(', ');
       } else {
-        text = col + ' : ' + selected + ' / ' + total + ' sélectionnées';
+        text = col + t('selectedOfTotalSuffix', { selected: selected, total: total });
       }
       parts.push(text);
     });
 
     var html = [];
-    html.push(h('strong', { text: 'Votre sélection actuelle — ' }));
-    html.push(document.createTextNode('Période : ' + yMin + '–' + yMax));
+    html.push(h('strong', { text: t('currentSelectionLabel') }));
+    html.push(document.createTextNode(t('periodLabel', { yMin: yMin, yMax: yMax })));
     parts.forEach(function (p) {
       html.push(h('span', { class: 'sep', text: '·' }));
       html.push(document.createTextNode(p));
@@ -1013,8 +1314,8 @@
     parts.push('<svg viewBox="0 0 ' + width + ' ' + height + '" xmlns="http://www.w3.org/2000/svg" font-family="Calibri, Arial, sans-serif">');
 
     var ticks = 4;
-    for (var t = 0; t <= ticks; t++) {
-      var val = maxVal * t / ticks;
+    for (var ti = 0; ti <= ticks; ti++) {
+      var val = maxVal * ti / ticks;
       var yy = marginTop + plotH - (val / maxVal) * plotH;
       parts.push('<line x1="' + marginLeft + '" x2="' + (width - marginRight) + '" y1="' + yy + '" y2="' + yy + '" stroke="#D1D3D4" stroke-width="1"/>');
       parts.push('<text x="' + (marginLeft - 8) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="11" fill="#48494b">' + formatSwiss(val) + '</text>');
@@ -1046,7 +1347,8 @@
       var pathD = points.map(function (p, i) { return (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
       parts.push('<path d="' + pathD + '" fill="none" stroke="#EA5A4F" stroke-width="2.5" stroke-dasharray="6 4"/>');
       points.forEach(function (p, i) {
-        parts.push('<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3.5" fill="#EA5A4F"><title>Tendance ' + years[i] + ' : ' + formatSwiss(trendValues[i]) + '</title></circle>');
+        var tooltip = t('trendTooltip', { year: years[i], val: formatSwiss(trendValues[i]) });
+        parts.push('<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3.5" fill="#EA5A4F"><title>' + tooltip + '</title></circle>');
       });
     }
 
@@ -1062,16 +1364,19 @@
     legendEl.innerHTML = '';
     legendEl.appendChild(h('span', { class: 'legend-item' }, [
       h('span', { class: 'legend-swatch-bar' }),
-      document.createTextNode('Montant annuel')
+      document.createTextNode(t('legendAmount'))
     ]));
     if (isFinite(cagr)) {
       var pct = cagr * 100;
+      var pctText = (pct >= 0 ? '+' : '') + pct.toFixed(1);
       legendEl.appendChild(h('span', { class: 'legend-item' }, [
         h('span', { class: 'legend-swatch-line' }),
-        document.createTextNode('Tendance (TCAM ' + (pct >= 0 ? '+' : '') + pct.toFixed(1) + ' %/an)')
+        document.createTextNode(t('legendTrend', { pct: pctText }))
       ]));
     }
   }
+
+  applyTranslations();
 
 })();
 </script>
